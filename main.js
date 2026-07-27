@@ -22,13 +22,17 @@ const state = {
   map: null, markers: null, singleLayer: null,
   renderTimer: null,
   searchTerm: '',
-  favorites: JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'),
+  favorites: (() => { try { return JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'); } catch(e) { return []; } })(),
   showFavoritesOnly: false,
   userCoords: null,
   userMarker: null,
 };
 
 function $(id) { return document.getElementById(id); }
+
+function lsGet(key, def) { try { return localStorage.getItem(key); } catch(e) { return def; } }
+function lsSet(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+function lsRemove(key) { try { localStorage.removeItem(key); } catch(e) {} }
 
 /* ---------- Helper Functions ---------- */
 function normalizeStr(s) {
@@ -71,7 +75,7 @@ function getEditsHash() {
 }
 
 function saveEditsHash(h) {
-  localStorage.setItem(EDITS_KEY, JSON.stringify(h));
+  lsSet(EDITS_KEY, JSON.stringify(h));
 }
 
 function saveEditAction(id, changes, originals) {
@@ -159,7 +163,7 @@ async function exportCorrectionsAction() {
     a.href = url; a.download = 'correcciones.json'; a.click();
     URL.revokeObjectURL(url);
     showToast(arr.length + ' correcciones exportadas. Coloca el archivo en la carpeta del proyecto y ejecuta _aplicar.bat');
-    localStorage.removeItem(EDITS_KEY);
+    lsRemove(EDITS_KEY);
     updateExportBadge();
     return;
   }
@@ -198,7 +202,7 @@ async function exportCorrectionsAction() {
     await writeFile('fuentes_complete.js', new Blob([jsStr], { type: 'text/javascript' }));
 
     // Done — clear edits and reload
-    localStorage.removeItem(EDITS_KEY);
+    lsRemove(EDITS_KEY);
     updateExportBadge();
     showToast(arr.length + ' correcciones guardadas permanentemente');
     setTimeout(() => { location.reload(); }, 1500);
@@ -378,7 +382,7 @@ function loadDataViaScript() {
 }
 
 async function initData() {
-  const storedVer = localStorage.getItem(DATA_VER_KEY);
+  const storedVer = lsGet(DATA_VER_KEY);
   try { state.db = await openDB(); } catch(e) { state.db = null; }
 
   let needPopulate = storedVer != DATA_VER;
@@ -404,7 +408,7 @@ async function initData() {
 
     if (state.db) {
       const cnt = await populateDB(state.db, data);
-      localStorage.setItem(DATA_VER_KEY, DATA_VER);
+      lsSet(DATA_VER_KEY, DATA_VER);
       console.log('IDB populated:', cnt, 'records');
     } else {
       state.allData = data;
@@ -473,7 +477,7 @@ function initMap() {
       attribution: TILE_LAYERS[k].attr, maxZoom: TILE_LAYERS[k].maxZoom
     });
   }
-  state.currentLayer = localStorage.getItem('map_layer') || 'osm';
+  state.currentLayer = lsGet('map_layer') || 'osm';
   state.tileLayers[state.currentLayer].addTo(state.map);
   state.markers = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, zoomToBoundsOnClick: true, disableClusteringAtZoom: 15 });
   state.map.addLayer(state.markers);
@@ -548,21 +552,25 @@ async function downloadVisibleTiles() {
   const zooms = [11, 12, 13, 14];
   let tileUrls = [];
 
+  let total = 0;
+  const MAX_TILES = 600;
+  outer:
   for (const z of zooms) {
     const r = getTileRange(bounds, z);
     for (let x = r.xMin; x <= r.xMax; x++) {
       for (let y = r.yMin; y <= r.yMax; y++) {
         tileUrls.push(getTileUrl(template, x, y, z));
+        total++;
+        if (total > MAX_TILES) break outer;
       }
     }
   }
 
-  const total = tileUrls.length;
   if (total === 0) {
     showToast("No hay mapas para descargar.");
     return;
   }
-  if (total > 600) {
+  if (total > MAX_TILES) {
     showToast(`Área demasiado grande (${total} teselas). Acerca el mapa.`);
     return;
   }
@@ -605,7 +613,7 @@ function setLayer(name) {
   if (state.tileLayers[state.currentLayer]) state.map.removeLayer(state.tileLayers[state.currentLayer]);
   if (state.tileLayers[name]) state.tileLayers[name].addTo(state.map);
   state.currentLayer = name;
-  localStorage.setItem('map_layer', name);
+  lsSet('map_layer', name);
   document.querySelectorAll('.layer-btn').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
 }
 
@@ -690,7 +698,7 @@ function renderCards() {}
 
 function esc(s) {
   if (s == null) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 /* ---------- Selection ---------- */
@@ -731,7 +739,7 @@ window.__toggleFav = function(id) {
   } else {
     state.favorites.splice(idx, 1);
   }
-  localStorage.setItem('fuentes_favorites', JSON.stringify(state.favorites));
+  lsSet('fuentes_favorites', JSON.stringify(state.favorites));
   
   const btn = $('modalFavBtn');
   if (btn) {
@@ -778,7 +786,7 @@ async function showModal(d) {
   ].filter(f => f.v != null && f.v !== '');
 
   let gridHtml = fields.map(f =>
-    `<div class="${f.l==='Acceso'?'full':''}"><span class="label">${f.l}</span><div class="value">${f.v}</div></div>`
+    `<div class="${f.l==='Acceso'?'full':''}"><span class="label">${f.l}</span><div class="value">${esc(f.v)}</div></div>`
   ).join('');
 
   let address = '';
@@ -995,8 +1003,9 @@ function renderSidePanel() {
 
 /* ---------- Stats ---------- */
 function updateStats() {
-  $('statTotal').textContent = state.allData.length.toLocaleString() + ' fuentes';
-  $('statFiltered').textContent = state.filtered.length.toLocaleString() + ' mostradas';
+  const st = $('statTotal'); const sf = $('statFiltered');
+  if (st) st.textContent = state.allData.length.toLocaleString() + ' fuentes';
+  if (sf) sf.textContent = state.filtered.length.toLocaleString() + ' mostradas';
 }
 
 /* ---------- Filters ---------- */
@@ -1138,8 +1147,8 @@ function initSidePanel() {
 
 /* ---------- Legal ---------- */
 function initLegal() {
-  if (!localStorage.getItem('cookies_accepted')) $('cookie-banner').style.display = 'block';
-  $('cb-accept').onclick = () => { localStorage.setItem('cookies_accepted','1'); $('cookie-banner').style.display='none'; };
+  if (!lsGet('cookies_accepted')) $('cookie-banner').style.display = 'block';
+  $('cb-accept').onclick = () => { lsSet('cookies_accepted','1'); $('cookie-banner').style.display='none'; };
   $('cb-info').onclick = () => showLegal('cookies');
   $('link-legal').onclick = e => { e.preventDefault(); showLegal('legal'); };
   $('link-privacy').onclick = e => { e.preventDefault(); showLegal('privacy'); };
@@ -1183,13 +1192,13 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- Loading ---------- */
-function showLoading(msg) { $('loading-text').textContent = msg || 'Cargando...'; }
-function hideLoading() { $('loading').style.display = 'none'; }
+function showLoading(msg) { const el = $('loading-text'); if (el) el.textContent = msg || 'Cargando...'; }
+function hideLoading() { const el = $('loading'); if (el) el.style.display = 'none'; }
 
 /* ---------- SW ---------- */
 function initSW() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW registration failed:', e));
   }
 }
 
