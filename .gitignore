@@ -2,7 +2,6 @@ FUENTES_Andalucia.accdb
 *.accdb
 .DS_Store
 Thumbs.db
-images/
-*.jpg
-*.jpeg
-*.png
+node_modules/
+test_out.jpg
+_test_one.js
