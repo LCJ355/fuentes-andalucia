@@ -1,8 +1,10 @@
 const CACHE = 'fuentes-v2';
+const BASE = self.location.pathname.replace(/\/[^/]*$/, '');
 const URLS = [
-  'index.html', 'style.css', 'main.js', 'photo_counts.js', 'fuentes_complete.json', 'fuentes_complete.js',
-  'manifest.json', 'lib/leaflet.js', 'lib/leaflet.css',
-  'lib/leaflet.markercluster.js', 'lib/MarkerCluster.css', 'lib/MarkerCluster.Default.css'
+  BASE + '/index.html', BASE + '/style.css', BASE + '/main.js', BASE + '/photo_counts.js',
+  BASE + '/fuentes_complete.json', BASE + '/fuentes_complete.js',
+  BASE + '/manifest.json', BASE + '/lib/leaflet.js', BASE + '/lib/leaflet.css',
+  BASE + '/lib/leaflet.markercluster.js', BASE + '/lib/MarkerCluster.css', BASE + '/lib/MarkerCluster.Default.css'
 ];
 const TILE_CACHE = 'osm-tiles-v1';
 const MAX_TILES = 2000;
@@ -71,9 +73,9 @@ async function tileStrategy(req) {
       const keys = await c.keys();
       if (keys.length < MAX_TILES) {
         await c.put(req, resp.clone());
-      } else if (Math.random() < 0.1) {
-        // Evict random tile when full
-        const evict = keys[Math.floor(Math.random() * keys.length)];
+      } else {
+        // Evict oldest tile when full
+        const evict = keys.sort()[0];
         await c.delete(evict);
         await c.put(req, resp.clone());
       }
