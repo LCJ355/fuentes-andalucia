@@ -496,7 +496,7 @@ function initMap() {
   document.querySelectorAll('.layer-btn[data-layer]').forEach(b => b.classList.toggle('active', b.dataset.layer === state.currentLayer));
   document.querySelectorAll('.layer-opt').forEach(b => b.classList.toggle('active', b.dataset.layer === state.currentLayer));
   const activeOpt = document.querySelector('.layer-opt.active');
-  document.getElementById('layerToggle').textContent = (activeOpt ? activeOpt.textContent : state.currentLayer) + ' ▾';
+  document.getElementById('layerToggle').textContent = (activeOpt ? activeOpt.textContent : state.currentLayer) + ' ▼';
   // Layer switcher (dropdown)
   document.querySelectorAll('.layer-opt').forEach(btn => {
     btn.addEventListener('click', () => setLayer(btn.dataset.layer, btn.textContent));
@@ -636,7 +636,7 @@ function setLayer(name, label) {
   lsSet('map_layer', name);
   document.querySelectorAll('.layer-btn').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
   document.querySelectorAll('.layer-opt').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
-  document.getElementById('layerToggle').textContent = (label || name) + ' ▾';
+  document.getElementById('layerToggle').textContent = (label || name) + ' ▼';
   closeLayerMenu();
 }
 
