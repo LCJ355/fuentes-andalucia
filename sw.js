@@ -1,4 +1,4 @@
-const CACHE = 'fuentes-v2';
+const CACHE = 'fuentes-v3';
 const BASE = self.location.pathname.replace(/\/[^/]*$/, '');
 const URLS = [
   BASE + '/index.html', BASE + '/style.css', BASE + '/main.js', BASE + '/photo_counts.js',
