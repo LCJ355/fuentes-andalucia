@@ -218,13 +218,7 @@ async function exportCorrectionsAction() {
 window.__exportCorrections = exportCorrectionsAction;
 
 function updateExportBadge() {
-  const btn = $('exportCorrectionsBtn');
-  if (!btn) return;
-  btn.style.display = state.adminMode ? '' : 'none';
-  if (!state.adminMode) return;
-  const cnt = getCorrectionsCount();
-  btn.textContent = cnt ? '[' + cnt + ']' : '[Export]';
-  btn.title = cnt ? cnt + ' correcciones pendientes de exportar' : 'Exportar correcciones';
+  // Export button is now in the modal; updates handled inline on modal creation
 }
 
 window.__openEdit = function(id) {
@@ -883,8 +877,9 @@ async function showModal(d) {
       </div>
       <div class="modal-grid">${gridHtml}</div>
       <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:8px">
-        <button class="btn ${state.adminMode ? 'btn-sec' : 'btn-accent'}" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
-        ${state.adminMode ? `<button class="btn btn-accent" onclick="window.__openEdit(${id})">Edit</button>` : ''}
+        ${state.adminMode ? `<button class="btn btn-sec" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin OFF</button>
+        <button class="btn btn-accent" onclick="window.__openEdit(${id})" style="font-size:.65rem">Edit</button>
+        <button class="btn btn-sec" onclick="window.__exportCorrections()" style="font-size:.65rem">${getCorrectionsCount() ? '['+getCorrectionsCount()+']' : '[Export]'}</button>` : `<button class="btn btn-accent" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin ON</button>`}
       </div>
     </div>
     </div>
