@@ -860,7 +860,8 @@ async function showModal(d) {
     address = `<div class="modal-actions">
       <a class="btn btn-accent" href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_self">[M] Google Maps</a>
       <a class="btn btn-sec" href="https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lon}#map=16/${d.lat}/${d.lon}" target="_blank">[M] OpenStreetMap</a>
-      <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin ON' : 'Admin'}</button>
+      <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
+      ${state.adminMode ? `<button class="btn btn-accent" onclick="window.__openEdit(${id})">Edit</button>` : ''}
     </div>`;
   }
 
@@ -944,7 +945,6 @@ async function showModal(d) {
         <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
         <span class="edit-actions-note">(solo campos modificados)</span>
         <button onclick="window.__cancelEdit()" class="btn btn-sec">Cancelar</button>
-        <button onclick="deactivateAdmin();document.getElementById('modal').classList.remove('show')" class="btn btn-sec" style="margin-left:auto;color:var(--sub);font-size:.6rem">Salir admin</button>
         ${getEditAction(id) ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">[Deshacer]</button>` : ''}
       </div>
     </div>
@@ -1264,7 +1264,8 @@ function initSidePanel() {
 /* ---------- Admin ---------- */
 window.__toggleAdmin = function(id) {
   if (state.adminMode) {
-    window.__openEdit(id);
+    deactivateAdmin();
+    document.getElementById('modal').classList.remove('show');
   } else {
     showAdminLogin();
   }
