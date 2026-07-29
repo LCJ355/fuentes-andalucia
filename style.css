@@ -51,6 +51,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .zoom-btn{font-weight:700;font-size:.75rem;width:22px;justify-content:center;padding:0}
 .map-info{text-align:center;font-size:.68rem;color:var(--sub);padding:.15rem}
 .map-info p{margin:.08rem 0}
+.map-info .hint{color:var(--accent);font-size:.75rem}
 .layer-btn{background:var(--bg);border:1px solid var(--border);padding:.1rem .4rem;border-radius:8px;color:var(--muted);cursor:pointer;font-size:.6rem;transition:all .12s;height:20px;line-height:1;display:flex;align-items:center;touch-action:manipulation}
 .layer-btn:hover{border-color:var(--accent);color:var(--accent)}
 .layer-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
