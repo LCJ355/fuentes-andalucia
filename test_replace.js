@@ -25,7 +25,7 @@ const state = {
   map: null, markers: null, singleLayer: null,
   renderTimer: null,
   searchTerm: '',
-  favorites: (() => { try { return JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'); } catch(e) { return []; } })(),
+  favorites: [],
   showFavoritesOnly: false,
   userCoords: null,
   userMarker: null,
