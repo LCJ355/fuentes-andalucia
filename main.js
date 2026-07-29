@@ -73,6 +73,7 @@ const CUENCA_COLORS = {
 const EDITS_KEY = 'fuentes_edits';
 let __editingId = null;
 let __editOriginals = null;
+let __pendingPhotos = [];
 
 function getEditsHash() {
   try { return JSON.parse(localStorage.getItem(EDITS_KEY) || '{}'); } catch(e) { return {}; }
@@ -231,16 +232,43 @@ function updateExportBadge() {
 
 window.__openEdit = function(id) {
   __editingId = id;
+  __pendingPhotos = [];
   const d = state.allData.find(x => x.id_fuente === id);
   if (!d) return;
   __editOriginals = {};
   for (const k of Object.keys(d)) __editOriginals[k] = d[k];
   $('modal-info-view').style.display = 'none';
   $('modal-edit-form').style.display = 'block';
+  // Init file input
+  const fileInp = document.getElementById('photoAddInput');
+  const prev = document.getElementById('photoPreview');
+  if (fileInp && prev) {
+    fileInp.value = '';
+    prev.innerHTML = '';
+    fileInp.onchange = function() {
+      prev.innerHTML = '';
+      __pendingPhotos = [];
+      const files = Array.from(this.files);
+      let loaded = 0;
+      files.forEach((f, idx) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          __pendingPhotos.push({ name: f.name, data: e.target.result });
+          const thumb = document.createElement('img');
+          thumb.src = e.target.result;
+          thumb.style.cssText = 'width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border)';
+          thumb.title = f.name;
+          prev.appendChild(thumb);
+          loaded++;
+        };
+        reader.readAsDataURL(f);
+      });
+    };
+  }
 };
 
 window.__cancelEdit = function() {
-  __editingId = null; __editOriginals = null;
+  __editingId = null; __editOriginals = null; __pendingPhotos = [];
   $('modal-info-view').style.display = '';
   $('modal-edit-form').style.display = 'none';
 };
@@ -257,15 +285,13 @@ window.__saveEdit = function(id) {
       if (inp.checked) photoChanges[inp.name] = true;
       continue;
     }
-    if (inp.name === '_photo_add') {
-      const urls = inp.value.trim().split('\n').map(s => s.trim()).filter(Boolean);
-      if (urls.length) photoChanges[inp.name] = urls;
-      continue;
-    }
     const val = inp.type === 'number' ? (inp.value === '' ? null : Number(inp.value)) : inp.value;
     if (val !== __editOriginals[inp.name]) {
       changes[inp.name] = val;
     }
+  }
+  if (window.__pendingPhotos && window.__pendingPhotos.length) {
+    photoChanges._add = window.__pendingPhotos.map(p => ({ name: p.name, data: p.data }));
   }
   if (Object.keys(photoChanges).length) changes._photos = photoChanges;
   if (!Object.keys(changes).length) {
@@ -911,10 +937,9 @@ async function showModal(d) {
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${Array.from({length:maxPhotos},(_,i)=>`
           <label style="font-size:.6rem;display:flex;align-items:center;gap:2px;color:var(--text)"><input type="checkbox" name="_photo_remove_${i+1}" value="1"> foto ${i+1}</label>
         `).join('')}</div>` : '<div style="font-size:.6rem;color:var(--sub);margin-bottom:4px">Sin fotos actualmente</div>'}
-        <label style="font-size:.65rem;color:var(--text);display:flex;flex-direction:column;gap:2px">
-          <span style="color:var(--sub);font-size:.6rem">Añadir fotos (URLs, una por línea)</span>
-          <textarea name="_photo_add" rows="2" style="background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:.25rem;font-size:.7rem;outline:none;font-family:inherit" placeholder="https://ejemplo.com/foto1.jpg"></textarea>
-        </label>
+        <div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Añadir fotos:</div>
+        <input type="file" accept="image/*" multiple id="photoAddInput" style="font-size:.65rem;color:var(--text);max-width:100%">
+        <div id="photoPreview" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
       </div>
       <div class="edit-actions">
         <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
