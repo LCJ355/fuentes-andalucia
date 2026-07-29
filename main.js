@@ -494,10 +494,19 @@ function initMap() {
 
   // Sync layer button
   document.querySelectorAll('.layer-btn[data-layer]').forEach(b => b.classList.toggle('active', b.dataset.layer === state.currentLayer));
-  // Layer switcher
-  document.querySelectorAll('.layer-btn[data-layer]').forEach(btn => {
-    btn.addEventListener('click', () => setLayer(btn.dataset.layer));
+  document.querySelectorAll('.layer-opt').forEach(b => b.classList.toggle('active', b.dataset.layer === state.currentLayer));
+  const activeOpt = document.querySelector('.layer-opt.active');
+  document.getElementById('layerToggle').textContent = (activeOpt ? activeOpt.textContent : state.currentLayer) + ' ▾';
+  // Layer switcher (dropdown)
+  document.querySelectorAll('.layer-opt').forEach(btn => {
+    btn.addEventListener('click', () => setLayer(btn.dataset.layer, btn.textContent));
   });
+  document.getElementById('layerToggle').onclick = e => {
+    e.stopPropagation();
+    document.getElementById('layerMenu').classList.toggle('open');
+    document.getElementById('layerToggle').classList.toggle('open');
+  };
+  document.addEventListener('click', closeLayerMenu);
   // Zoom buttons
   $('zoomIn').onclick = () => state.map.zoomIn();
   $('zoomOut').onclick = () => state.map.zoomOut();
@@ -614,13 +623,21 @@ async function downloadVisibleTiles() {
   }
 }
 
-function setLayer(name) {
+function closeLayerMenu() {
+  document.getElementById('layerMenu').classList.remove('open');
+  document.getElementById('layerToggle').classList.remove('open');
+}
+
+function setLayer(name, label) {
   if (name === state.currentLayer) return;
   if (state.tileLayers[state.currentLayer]) state.map.removeLayer(state.tileLayers[state.currentLayer]);
   if (state.tileLayers[name]) state.tileLayers[name].addTo(state.map);
   state.currentLayer = name;
   lsSet('map_layer', name);
   document.querySelectorAll('.layer-btn').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
+  document.querySelectorAll('.layer-opt').forEach(b => b.classList.toggle('active', b.dataset.layer === name));
+  document.getElementById('layerToggle').textContent = (label || name) + ' ▾';
+  closeLayerMenu();
 }
 
 function renderMap() {
