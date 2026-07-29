@@ -142,6 +142,7 @@ function applyStoredEdits() {
     const record = state.allData.find(d => d.id_fuente === parseInt(sid));
     if (record && edit.changes) {
       for (const [k, v] of Object.entries(edit.changes)) {
+        if (k === '_photos') continue;
         if (v === null || v === '') record[k] = null;
         else if (k === 'altitud' || k === 'huso') record[k] = Number(v);
         else record[k] = v;
@@ -250,12 +251,23 @@ window.__saveEdit = function(id) {
   const form = $('modal-edit-form');
   const inputs = form.querySelectorAll('[name]');
   const changes = {};
+  const photoChanges = {};
   for (const inp of inputs) {
+    if (inp.name.startsWith('_photo_remove_')) {
+      if (inp.checked) photoChanges[inp.name] = true;
+      continue;
+    }
+    if (inp.name === '_photo_add') {
+      const urls = inp.value.trim().split('\n').map(s => s.trim()).filter(Boolean);
+      if (urls.length) photoChanges[inp.name] = urls;
+      continue;
+    }
     const val = inp.type === 'number' ? (inp.value === '' ? null : Number(inp.value)) : inp.value;
     if (val !== __editOriginals[inp.name]) {
       changes[inp.name] = val;
     }
   }
+  if (Object.keys(photoChanges).length) changes._photos = photoChanges;
   if (!Object.keys(changes).length) {
     showToast('No hay cambios que guardar');
     return;
@@ -265,8 +277,9 @@ window.__saveEdit = function(id) {
   for (const k of Object.keys(changes)) {
     originals[k] = d[k];
   }
-  // Apply to data in memory
+  // Apply to data in memory (skip photo keys)
   for (const [k, v] of Object.entries(changes)) {
+    if (k === '_photos') continue;
     d[k] = (v === null || v === '') ? null : v;
   }
   saveEditAction(id, changes, originals);
@@ -891,6 +904,17 @@ async function showModal(d) {
           const isNum = f.key === 'altitud' || f.key === 'huso';
           return `<label>${f.label} <input type="${isNum?'number':'text'}" name="${f.key}" value="${esc(val)}"></label>`;
         }).join('')}
+      </div>
+      <div class="edit-photo-section" style="margin-top:8px;padding:6px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border)">
+        <div style="font-size:.7rem;font-weight:600;color:var(--accent);margin-bottom:4px">Fotos</div>
+        ${maxPhotos > 0 ? `<div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Marcar para eliminar:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${Array.from({length:maxPhotos},(_,i)=>`
+          <label style="font-size:.6rem;display:flex;align-items:center;gap:2px;color:var(--text)"><input type="checkbox" name="_photo_remove_${i+1}" value="1"> foto ${i+1}</label>
+        `).join('')}</div>` : '<div style="font-size:.6rem;color:var(--sub);margin-bottom:4px">Sin fotos actualmente</div>'}
+        <label style="font-size:.65rem;color:var(--text);display:flex;flex-direction:column;gap:2px">
+          <span style="color:var(--sub);font-size:.6rem">Añadir fotos (URLs, una por línea)</span>
+          <textarea name="_photo_add" rows="2" style="background:var(--panel);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:.25rem;font-size:.7rem;outline:none;font-family:inherit" placeholder="https://ejemplo.com/foto1.jpg"></textarea>
+        </label>
       </div>
       <div class="edit-actions">
         <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
