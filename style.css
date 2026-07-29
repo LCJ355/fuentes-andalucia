@@ -196,7 +196,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .side-backdrop{display:block}
 .side-backdrop.hidden{display:none}
 .mobile-only{display:initial}
-.layer-switcher{bottom:8px!important;top:auto!important;gap:2px;padding:4px;flex-wrap:wrap;max-width:60%}
+.layer-switcher{bottom:8px!important;top:auto!important;left:8px!important;right:auto!important;gap:2px;padding:4px;flex-wrap:wrap;max-width:60%}
 .layer-btn{font-size:.55rem;padding:.05rem .3rem;height:28px}
 .zoom-btn{width:28px;font-size:.85rem}
 .filter-bar{flex-wrap:wrap;height:auto;min-height:var(--filter-h);padding:.15rem .25rem;gap:.15rem}
@@ -214,7 +214,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .toast.show{transform:translateY(0)}
 .modal-info{padding:.6rem}
 .modal-title{font-size:1.1rem}
-.layer-switcher{bottom:4px!important;top:auto!important;right:4px;padding:3px;gap:1px;max-width:65%}
+.layer-switcher{bottom:4px!important;top:auto!important;left:4px!important;right:auto!important;padding:3px;gap:1px;max-width:65%}
 .layer-btn{font-size:.5rem;height:24px;padding:.05rem .15rem}
 .zoom-btn{width:24px;font-size:.75rem}
 #downloadTilesBtn .dl-text{display:none}
