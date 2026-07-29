@@ -1274,18 +1274,6 @@ window.__toggleAdmin = function(id) {
 };
 
 function updateAdminBadge() {
-  let badge = document.getElementById('adminBadge');
-  if (state.adminMode) {
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.id = 'adminBadge';
-      badge.className = 'admin-badge';
-      badge.textContent = 'ADMIN';
-      document.body.appendChild(badge);
-    }
-  } else {
-    if (badge) badge.remove();
-  }
 }
 
 function activateAdmin(pwd) {
