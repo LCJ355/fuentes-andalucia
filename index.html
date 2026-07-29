@@ -81,13 +81,17 @@
   <aside class="map-panel">
     <div id="map">
       <div class="layer-switcher" id="layerSwitcher">
-        <button class="layer-btn active" data-layer="osm">OSM</button>
-        <button class="layer-btn" data-layer="topo">Topo</button>
-        <button class="layer-btn" data-layer="cyclo">Ciclo</button>
-        <button class="layer-btn" data-layer="sat">Satélite</button>
-        <span class="layer-sep"></span>
+        <div class="layer-dropdown" id="layerDropdown">
+          <button class="layer-dropdown-toggle" id="layerToggle">OSM ▾</button>
+          <div class="layer-dropdown-menu" id="layerMenu">
+            <button class="layer-opt active" data-layer="osm">OSM</button>
+            <button class="layer-opt" data-layer="topo">Topo</button>
+            <button class="layer-opt" data-layer="cyclo">Ciclo</button>
+            <button class="layer-opt" data-layer="sat">Satélite</button>
+          </div>
+        </div>
         <button class="layer-btn" id="gpsBtn" title="Centrar en mi ubicación">🎯</button>
-        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">💾 <span class="dl-text">Descargar Mapa</span></button>
+        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">💾</button>
         <span class="layer-sep"></span>
         <button class="layer-btn zoom-btn" id="zoomIn">+</button>
         <button class="layer-btn zoom-btn" id="zoomOut">−</button>
