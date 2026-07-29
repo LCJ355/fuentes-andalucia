@@ -6,9 +6,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--panel);color:var(--text);z-index:100;border-bottom:1px solid var(--border)}
-.topbar-inner{display:flex;align-items:center;justify-content:center;height:100%;padding:0 1rem;position:relative}
+.topbar-inner{display:flex;align-items:center;height:100%;padding:0 1rem;position:relative;gap:.5rem}
 .topbar h1{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1}
-
 .topbar-stats{font-size:.72rem;color:var(--muted);display:flex;gap:.3rem;align-items:center;flex-shrink:0}
 .stat-sep{color:var(--sub)}
 .filter-bar{position:fixed;top:var(--topbar-h);left:0;right:0;height:var(--filter-h);background:var(--panel);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 .35rem;gap:.15rem;overflow-x:auto}
@@ -198,6 +197,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .mobile-only{display:none}
 @media(max-width:768px){
 .hamburger{display:flex}
+.topbar-stats{padding-left:2.5rem}
 .side-backdrop{display:block}
 .side-backdrop.hidden{display:none}
 .mobile-only{display:initial}
