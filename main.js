@@ -879,7 +879,7 @@ async function showModal(d) {
       <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:8px">
         ${state.adminMode ? `<button class="btn btn-sec" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin OFF</button>
         <button class="btn btn-accent" onclick="window.__openEdit(${id})" style="font-size:.65rem">Edit</button>
-        <button class="btn btn-sec" onclick="window.__exportCorrections()" style="font-size:.65rem">${getCorrectionsCount() ? '['+getCorrectionsCount()+']' : '[Export]'}</button>` : `<button class="btn btn-accent" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin ON</button>`}
+        ${getCorrectionsCount() ? `<button class="btn btn-sec" onclick="window.__exportCorrections()" style="font-size:.65rem">[${getCorrectionsCount()}]</button>` : ''}` : `<button class="btn btn-accent" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin ON</button>`}
       </div>
     </div>
     </div>
