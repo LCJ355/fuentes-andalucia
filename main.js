@@ -860,8 +860,6 @@ async function showModal(d) {
     address = `<div class="modal-actions">
       <a class="btn btn-accent" href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_self">[M] Google Maps</a>
       <a class="btn btn-sec" href="https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lon}#map=16/${d.lat}/${d.lon}" target="_blank">[M] OpenStreetMap</a>
-      <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
-      ${state.adminMode ? `<button class="btn btn-accent" onclick="window.__openEdit(${id})">Edit</button>` : ''}
     </div>`;
   }
 
@@ -908,6 +906,10 @@ async function showModal(d) {
         ` : ''}
       </div>
       <div class="modal-grid">${gridHtml}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:8px">
+        <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
+        ${state.adminMode ? `<button class="btn btn-accent" onclick="window.__openEdit(${id})">Edit</button>` : ''}
+      </div>
     </div>
     </div>
     <div id="modal-edit-form" style="display:none">
