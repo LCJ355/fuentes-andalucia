@@ -821,6 +821,7 @@ async function showModal(d) {
     address = `<div class="modal-actions">
       <a class="btn btn-accent" href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_self">[M] Google Maps</a>
       <a class="btn btn-sec" href="https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lon}#map=16/${d.lat}/${d.lon}" target="_blank">[M] OpenStreetMap</a>
+      <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin ON' : 'Admin'}</button>
     </div>`;
   }
 
@@ -1212,6 +1213,16 @@ function initSidePanel() {
 }
 
 /* ---------- Admin ---------- */
+window.__toggleAdmin = function(id) {
+  if (state.adminMode) {
+    deactivateAdmin();
+    document.getElementById('modal').classList.remove('show');
+    showToast('Admin desactivado');
+  } else {
+    showAdminLogin();
+  }
+};
+
 function updateAdminBadge() {
   let badge = document.getElementById('adminBadge');
   if (state.adminMode) {
@@ -1246,7 +1257,7 @@ function deactivateAdmin() {
   showToast('Modo admin desactivado');
 }
 
-function showAdminLogin(adminLink) {
+function showAdminLogin() {
   const modal = $('modal');
   const body = $('modal-body');
   body.innerHTML = `
@@ -1270,7 +1281,6 @@ function showAdminLogin(adminLink) {
     if (!val) { errorEl.textContent = 'Introduce la contraseña'; errorEl.style.display = ''; return; }
     if (activateAdmin(val)) {
       modal.classList.remove('show');
-      adminLink.textContent = 'Admin';
     } else {
       errorEl.textContent = 'Contraseña incorrecta';
       errorEl.style.display = '';
@@ -1291,22 +1301,6 @@ function initLegal() {
   $('link-legal').onclick = e => { e.preventDefault(); showLegal('legal'); };
   $('link-privacy').onclick = e => { e.preventDefault(); showLegal('privacy'); };
   $('link-cookies').onclick = e => { e.preventDefault(); showLegal('cookies'); };
-
-  const adminLink = $('link-admin');
-  if (adminLink) {
-    if (state.adminMode) {
-      adminLink.textContent = 'Admin';
-    }
-    adminLink.onclick = e => {
-      e.preventDefault();
-      if (state.adminMode) {
-        deactivateAdmin();
-        adminLink.textContent = 'Admin';
-      } else {
-        showAdminLogin(adminLink);
-      }
-    };
-  }
 }
 
 function showLegal(section) {
