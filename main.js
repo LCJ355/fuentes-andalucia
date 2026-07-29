@@ -1248,7 +1248,7 @@ function showAdminLogin(adminLink) {
     if (!val) { errorEl.textContent = 'Introduce la contraseña'; errorEl.style.display = ''; return; }
     if (activateAdmin(val)) {
       modal.classList.remove('show');
-      adminLink.textContent = '🔓 Admin';
+      adminLink.textContent = '🔓';
     } else {
       errorEl.textContent = 'Contraseña incorrecta';
       errorEl.style.display = '';
@@ -1273,13 +1273,13 @@ function initLegal() {
   const adminLink = $('link-admin');
   if (adminLink) {
     if (state.adminMode) {
-      adminLink.textContent = '🔓 Admin';
+      adminLink.textContent = '🔓';
     }
     adminLink.onclick = e => {
       e.preventDefault();
       if (state.adminMode) {
         deactivateAdmin();
-        adminLink.textContent = '🔒 Admin';
+        adminLink.textContent = '🔒';
       } else {
         showAdminLogin(adminLink);
       }
