@@ -18,9 +18,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .filter-select:focus{border-color:var(--accent)}
 .filter-select option{background:var(--panel);color:var(--text)}
 .search-input{cursor:text !important;min-width:130px !important}
-.fav-toggle-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;font-weight:600;transition:all .15s}
-.fav-toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.fav-toggle-btn .btn-lbl{display:inline}
+
 .app-layout{position:fixed;top:calc(var(--topbar-h) + var(--filter-h));left:0;right:0;bottom:0;display:flex}
 /* Side panel */
 .side-panel{width:var(--side-w);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:margin-left .2s cubic-bezier(.2,.8,.2,1), transform .2s cubic-bezier(.2,.8,.2,1)}
@@ -141,8 +139,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* Custom styles for enhancements */
-.fav-btn-modal{background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;padding:4px;transition:color .12s;vertical-align:middle;margin-left:10px}
-.fav-btn-modal:hover, .fav-btn-modal.active{color:#f1c40f}
 
 /* Edit system */
 .edit-btn{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px;transition:color .12s;vertical-align:middle;margin-left:4px}

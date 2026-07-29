@@ -25,10 +25,7 @@ const state = {
   map: null, markers: null, singleLayer: null,
   renderTimer: null,
   searchTerm: '',
-  favorites: (() => { try { return JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'); } catch(e) { return []; } })(),
-  showFavoritesOnly: false,
   userCoords: null,
-  userMarker: null,
   adminMode: (() => { try { return localStorage.getItem(ADMIN_KEY) === '1'; } catch(e) { return false; } })(),
 };
 
@@ -481,7 +478,6 @@ function applyFilters() {
     if (state.municipio && d.municipio !== state.municipio) return false;
     if (state.pedania && (d.pedania||'') !== state.pedania) return false;
     if (state.cuenca && d.cuenca !== state.cuenca) return false;
-    if (state.showFavoritesOnly && !state.favorites.includes(d.id_fuente)) return false;
     if (state.searchTerm) {
       const nameNorm = normalizeStr(d.nombre);
       if (!nameNorm.includes(state.searchTerm)) return false;
@@ -798,29 +794,10 @@ function updateHash() {
 
 /* ---------- Modal ---------- */
 /* ---------- Favorites Toggle Function ---------- */
-window.__toggleFav = function(id) {
-  const idx = state.favorites.indexOf(id);
-  if (idx === -1) {
-    state.favorites.push(id);
-  } else {
-    state.favorites.splice(idx, 1);
-  }
-  lsSet('fuentes_favorites', JSON.stringify(state.favorites));
-  
-  const btn = $('modalFavBtn');
-  if (btn) {
-    const isFav = state.favorites.includes(id);
-    btn.classList.toggle('active', isFav);
-    btn.textContent = isFav ? '★' : '☆';
-  }
-  updateUI();
-};
-
 async function showModal(d) {
   const body = $('modal-body');
   const modal = $('modal');
   const id = d.id_fuente;
-  const isFav = state.favorites.includes(id);
   const hasPhotoCounts = typeof window.PHOTO_COUNTS !== 'undefined';
   
   let maxPhotos = 0;
@@ -890,7 +867,6 @@ async function showModal(d) {
     <div class="modal-info">
       <div class="modal-title">
         ${esc(d.nombre)}
-        <button id="modalFavBtn" class="fav-btn-modal${isFav ? ' active' : ''}" onclick="window.__toggleFav(${id})" title="Marcar como favorito">${isFav ? '★' : '☆'}</button>
       </div>
       <div class="modal-address">${esc(d.municipio)}${d.pedania ? ', '+esc(d.pedania) : ''}, ${esc(d.provincia)}</div>
       ${address}
@@ -1031,7 +1007,7 @@ function renderSidePanel() {
   const list = $('sideList');
   const panel = $('sidePanel');
   
-  const hasFilter = state.provincia || state.cuenca || state.searchTerm || state.showFavoritesOnly || state.userCoords;
+        const hasFilter = state.provincia || state.cuenca || state.searchTerm || state.userCoords;
   if (!hasFilter) {
     list.innerHTML = '<div style="padding:.5rem;font-size:.72rem;color:var(--sub);text-align:center">Selecciona una provincia/cuenca, busca por nombre o usa el GPS</div>';
     panel.classList.add('collapsed');
@@ -1204,13 +1180,6 @@ function buildFilters() {
     updateUI();
   });
 
-  // Favorites toggle listener
-  $('favsToggleBtn').addEventListener('click', () => {
-    state.showFavoritesOnly = !state.showFavoritesOnly;
-    $('favsToggleBtn').classList.toggle('active', state.showFavoritesOnly);
-    updateUI();
-  });
-
   populateMuniPed();
   populateCuenca();
 }
@@ -1238,7 +1207,7 @@ function initSidePanel() {
   if (hamburger) {
     hamburger.onclick = () => {
       if (panel.classList.contains('collapsed')) {
-        const hasFilter = state.provincia || state.cuenca || state.searchTerm || state.showFavoritesOnly || state.userCoords;
+  const hasFilter = state.provincia || state.cuenca || state.searchTerm || state.userCoords;
         if (!hasFilter || !state.filtered.length) return;
         openPanel();
       } else {
