@@ -658,8 +658,11 @@ function addMarker(d) {
   const popupHtml = `<div class="marker-popup"><div class="popup-photo-wrap"><img src="images/cf_${d.id_fuente}_1.jpg" onerror="this.style.display='none'" class="popup-img"></div><b>${esc(d.nombre)}</b><br><small>${esc(d.municipio)}, ${esc(d.provincia)}</small>${meta ? `<div class="popup-meta">${esc(meta)}</div>` : ''}</div>`;
   marker.bindPopup(popupHtml, { maxWidth: 220, className: 'marker-popup-wrap', closeButton: false });
   marker.fuenteId = d.id_fuente;
-  marker.on('mouseover', () => marker.openPopup());
-  marker.on('mouseout', () => marker.closePopup());
+  const isTouch = 'ontouchstart' in window;
+  if (!isTouch) {
+    marker.on('mouseover', () => marker.openPopup());
+    marker.on('mouseout', () => marker.closePopup());
+  }
   marker.on('click', () => selectFuente(d.id_fuente));
   const target = state.singleLayer || state.markers;
   target.addLayer(marker);
@@ -676,7 +679,8 @@ function fitToFiltered() {
   if (coords.length === 1) {
     state.map.setView(coords[0], 14, { animate: true });
   } else {
-    const panelOpen = !$('sidePanel').classList.contains('collapsed');
+    const isMobile = window.innerWidth <= 768;
+    const panelOpen = !isMobile && !$('sidePanel').classList.contains('collapsed');
     if (panelOpen) {
       state.map.fitBounds(coords, { paddingTopLeft: [290, 30], paddingBottomRight: [50, 50] });
     } else {
@@ -1138,11 +1142,45 @@ function buildFilters() {
 
 /* ---------- Side Panel Init ---------- */
 function initSidePanel() {
-  $('sideClose').onclick = () => $('sidePanel').classList.add('collapsed');
+  const panel = $('sidePanel');
+  const backdrop = $('sideBackdrop');
+  const hamburger = $('hamburgerBtn');
+
+  function closePanel() {
+    panel.classList.add('collapsed');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+
+  function openPanel() {
+    panel.classList.remove('collapsed');
+    if (backdrop) backdrop.classList.remove('hidden');
+  }
+
+  $('sideClose').onclick = closePanel;
+
+  if (backdrop) backdrop.onclick = closePanel;
+
+  if (hamburger) {
+    hamburger.onclick = () => {
+      if (panel.classList.contains('collapsed')) openPanel();
+      else closePanel();
+    };
+  }
+
   // Close on mobile when tapping map
   $('map').addEventListener('click', () => {
-    if (window.innerWidth <= 768 && !$('sidePanel').classList.contains('collapsed')) $('sidePanel').classList.add('collapsed');
+    if (window.innerWidth <= 768 && !panel.classList.contains('collapsed')) closePanel();
   });
+
+  // Sync backdrop with panel state after each render
+  const origRender = renderSidePanel;
+  renderSidePanel = function() {
+    origRender();
+    if (backdrop) {
+      if (panel.classList.contains('collapsed')) backdrop.classList.add('hidden');
+      else backdrop.classList.remove('hidden');
+    }
+  };
 }
 
 /* ---------- Legal ---------- */

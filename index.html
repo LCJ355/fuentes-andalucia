@@ -22,6 +22,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Abrir panel lateral">☰</button>
     <div class="topbar-brand">
       <span class="topbar-icon">💧</span>
       <h1>Fuentes de Andalucía</h1>
@@ -68,6 +69,7 @@
 </div>
 
 <div class="app-layout">
+  <div class="side-backdrop hidden" id="sideBackdrop"></div>
   <aside class="side-panel collapsed" id="sidePanel">
     <div class="side-header">
       <div class="side-title" id="sideTitle">Resultados</div>
@@ -84,14 +86,14 @@
         <button class="layer-btn" data-layer="sat">Satélite</button>
         <span class="layer-sep"></span>
         <button class="layer-btn" id="gpsBtn" title="Centrar en mi ubicación">🎯</button>
-        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">💾 Descargar Mapa</button>
+        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">💾 <span class="dl-text">Descargar Mapa</span></button>
         <span class="layer-sep"></span>
         <button class="layer-btn zoom-btn" id="zoomIn">+</button>
         <button class="layer-btn zoom-btn" id="zoomOut">−</button>
       </div>
     </div>
     <div class="map-info">
-      <p>Haz clic en un marcador para ver detalles</p>
+      <p>Selecciona un marcador para ver detalles</p>
       <p id="active-card-name"></p>
     </div>
   </aside>
