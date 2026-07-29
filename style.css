@@ -10,7 +10,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .topbar-brand{display:flex;align-items:center;gap:.4rem;min-width:0}
 .topbar-icon{font-size:1.2rem;flex-shrink:0}
 .topbar h1{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.badge-offline{font-size:.55rem;color:var(--muted);padding:2px 5px;border:1px solid var(--border);border-radius:4px;white-space:nowrap;flex-shrink:0}
+
 .topbar-stats{font-size:.72rem;color:var(--muted);display:flex;gap:.3rem;align-items:center;flex-shrink:0}
 .stat-sep{color:var(--sub)}
 .filter-bar{position:fixed;top:var(--topbar-h);left:0;right:0;height:var(--filter-h);background:var(--panel);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 .35rem;gap:.15rem;overflow-x:auto}
@@ -215,7 +215,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 @media(max-width:500px){
 .topbar h1{font-size:15px}
 .topbar-stats{font-size:.55rem}
-.badge-offline{display:none}
+
 .filter-select{font-size:10px;min-width:60px;height:28px;padding:.12rem .2rem}
 .search-input{min-width:90px!important}
 .gal-arrow{width:36px;height:36px;font-size:1rem}
