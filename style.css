@@ -154,7 +154,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .edit-actions-note{font-size:.6rem;color:var(--sub);margin-right:auto}
 .btn-del{background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b}
 .btn-del:hover{background:#991b1b}
-.export-btn{font-size:.85rem !important;padding:.1rem .25rem !important;min-width:28px !important;max-width:32px !important;display:flex;align-items:center;justify-content:center}
 
 .user-gps-marker{background:#3b82f6;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 0 rgba(59,130,246,.7);animation:gps-pulse 1.6s infinite}
 @keyframes gps-pulse{
