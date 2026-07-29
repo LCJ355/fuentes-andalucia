@@ -24,15 +24,15 @@
   <div class="topbar-inner">
     <button class="hamburger" id="hamburgerBtn" aria-label="Abrir panel lateral">☰</button>
     <div class="topbar-brand">
-      <span class="topbar-icon">💧</span>
+      <span class="topbar-icon">~</span>
       <h1>Fuentes de Andalucía</h1>
-      <span class="badge-offline" title="Funciona sin internet">📡 Offline</span>
-      <a href="#" id="link-admin" class="admin-link" role="button" title="Administrar">🔒</a>
+      <span class="badge-offline" title="Funciona sin internet">Offline</span>
+      <a href="#" id="link-admin" class="admin-link" role="button" title="Administrar">Admin</a>
     </div>
     <div class="topbar-stats">
-      <span id="statTotal">—</span>
+      <span id="statTotal">-</span>
       <span class="stat-sep">·</span>
-      <span id="statFiltered">—</span>
+      <span id="statFiltered">-</span>
     </div>
   </div>
 </header>
@@ -42,7 +42,7 @@
     <input type="text" id="textSearch" placeholder="Buscar por nombre..." class="filter-select search-input" aria-label="Buscar por nombre">
   </div>
   <div class="filter-group">
-    <button id="favsToggleBtn" class="filter-select fav-toggle-btn" aria-label="Mostrar favoritos">⭐ <span class="btn-lbl">Favoritos</span></button>
+    <button id="favsToggleBtn" class="filter-select fav-toggle-btn" aria-label="Mostrar favoritos">* <span class="btn-lbl">Favoritos</span></button>
   </div>
   <div class="filter-group">
     <select id="provSelect" class="filter-select" aria-label="Filtrar por provincia">
@@ -65,7 +65,7 @@
     </select>
   </div>
   <div class="filter-group">
-    <button id="exportCorrectionsBtn" class="filter-select export-btn" title="Exportar correcciones para aplicar al .accdb" onclick="window.__exportCorrections()">📥</button>
+    <button id="exportCorrectionsBtn" class="filter-select export-btn" title="Exportar correcciones para aplicar al .accdb" onclick="window.__exportCorrections()">Exp</button>
   </div>
 </div>
 
@@ -90,11 +90,11 @@
             <button class="layer-opt" data-layer="sat">Satélite</button>
           </div>
         </div>
-        <button class="layer-btn" id="gpsBtn" title="Centrar en mi ubicación">🎯</button>
-        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">💾</button>
+        <button class="layer-btn" id="gpsBtn" title="Centrar en mi ubicación">GPS</button>
+        <button class="layer-btn" id="downloadTilesBtn" title="Descargar zona offline">DL</button>
         <span class="layer-sep"></span>
         <button class="layer-btn zoom-btn" id="zoomIn">+</button>
-        <button class="layer-btn zoom-btn" id="zoomOut">−</button>
+        <button class="layer-btn zoom-btn" id="zoomOut">-</button>
       </div>
     </div>
     <div class="map-info">
@@ -117,7 +117,7 @@
 
 <div id="cookie-banner" role="alert">
   <div class="cb-content">
-    <div class="cb-text">🍪 Esta web utiliza <strong>almacenamiento local</strong> para guardar preferencias. No recopilamos ni compartimos datos personales.</div>
+    <div class="cb-text">Esta web utiliza <strong>almacenamiento local</strong> para guardar preferencias. No recopilamos ni compartimos datos personales.</div>
     <div class="cb-btns">
       <button id="cb-accept" class="btn btn-accent">Aceptar</button>
       <button id="cb-info" class="btn btn-sec">Más info</button>
@@ -140,7 +140,7 @@
   <a href="#" id="link-privacy" role="button">Privacidad</a> ·
   <a href="#" id="link-cookies" role="button">Cookies</a>
 </div>
-<div id="footer-credit">Idea original de Luciano CJ ❤️ <span class="credit-quote">"no me copies sino es para mejorarme"</span></div>
+<div id="footer-credit">Idea original de Luciano CJ <span class="credit-quote">"no me copies sino es para mejorarme"</span></div>
 
 <script src="lib/leaflet.js?v=2"></script>
 <script src="lib/leaflet.markercluster.js?v=2"></script>

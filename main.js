@@ -224,7 +224,7 @@ function updateExportBadge() {
   btn.style.display = state.adminMode ? '' : 'none';
   if (!state.adminMode) return;
   const cnt = getCorrectionsCount();
-  btn.textContent = cnt ? '📥' + cnt : '📥';
+  btn.textContent = cnt ? '[' + cnt + ']' : '[Export]';
   btn.title = cnt ? cnt + ' correcciones pendientes de exportar' : 'Exportar correcciones';
 }
 
@@ -819,8 +819,8 @@ async function showModal(d) {
   let address = '';
   if (d.lat != null && d.lon != null) {
     address = `<div class="modal-actions">
-      <a class="btn btn-accent" href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_self">🗺️ Google Maps</a>
-      <a class="btn btn-sec" href="https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lon}#map=16/${d.lat}/${d.lon}" target="_blank">🗺️ OpenStreetMap</a>
+      <a class="btn btn-accent" href="https://www.google.com/maps?q=${d.lat},${d.lon}" target="_self">[M] Google Maps</a>
+      <a class="btn btn-sec" href="https://www.openstreetmap.org/?mlat=${d.lat}&mlon=${d.lon}#map=16/${d.lat}/${d.lon}" target="_blank">[M] OpenStreetMap</a>
     </div>`;
   }
 
@@ -852,7 +852,7 @@ async function showModal(d) {
       <div class="modal-title">
         ${esc(d.nombre)}
         <button id="modalFavBtn" class="fav-btn-modal${isFav ? ' active' : ''}" onclick="window.__toggleFav(${id})" title="Marcar como favorito">${isFav ? '★' : '☆'}</button>
-        ${state.adminMode ? `<button class="edit-btn" onclick="window.__openEdit(${id})" title="Editar ficha">✏️</button>` : ''}
+        ${state.adminMode ? `<button class="edit-btn" onclick="window.__openEdit(${id})" title="Editar ficha">[Editar]</button>` : ''}
       </div>
       <div class="modal-address">${esc(d.municipio)}${d.pedania ? ', '+esc(d.pedania) : ''}, ${esc(d.provincia)}</div>
       ${address}
@@ -871,7 +871,7 @@ async function showModal(d) {
     </div>
     </div>
     <div id="modal-edit-form" style="display:none">
-      <h3 style="margin-bottom:8px;font-size:.85rem">✏️ Editar ficha #${id}</h3>
+      <h3 style="margin-bottom:8px;font-size:.85rem">[Editar] ficha #${id}</h3>
       <div class="edit-grid">
         ${EDIT_FIELDS.map(f => {
           const val = d[f.key] != null ? d[f.key] : '';
@@ -881,7 +881,7 @@ async function showModal(d) {
           }
           if (f.key === 'cuenca') {
             const cuencas = [...new Set(state.allData.map(x => x.cuenca).filter(Boolean))].sort();
-            return `<label>${f.label} <select name="${f.key}"><option value="">—</option>${cuencas.map(c => `<option value="${esc(c)}"${c===val?' selected':''}>${esc(c)}</option>`).join('')}</select></label>`;
+            return `<label>${f.label} <select name="${f.key}"><option value="">-</option>${cuencas.map(c => `<option value="${esc(c)}"${c===val?' selected':''}>${esc(c)}</option>`).join('')}</select></label>`;
           }
           const isLong = f.key === 'descripcion' || f.key === 'acceso';
           if (isLong) {
@@ -892,10 +892,10 @@ async function showModal(d) {
         }).join('')}
       </div>
       <div class="edit-actions">
-        <button onclick="window.__saveEdit(${id})" class="btn btn-accent">💾 Guardar</button>
+        <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
         <span class="edit-actions-note">(solo campos modificados)</span>
         <button onclick="window.__cancelEdit()" class="btn btn-sec">Cancelar</button>
-        ${getEditAction(id) ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">🗑️ Deshacer edición</button>` : ''}
+        ${getEditAction(id) ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">[Deshacer]</button>` : ''}
       </div>
     </div>
   `;
@@ -999,10 +999,10 @@ function renderSidePanel() {
       
     const imgHtml = maxPhotos > 0 
       ? `<img src="images/cf_${d.id_fuente}_1.jpg" onerror="this.style.display='none'" class="side-item-img">`
-      : `<div class="side-item-img" style="display:flex;align-items:center;justify-content:center;font-size:1rem;background:var(--bg)">💧</div>`;
+      : `<div class="side-item-img" style="display:flex;align-items:center;justify-content:center;font-size:.7rem;background:var(--bg);color:var(--sub)">~</div>`;
       
     const distText = d._distance && d._distance !== Infinity 
-      ? ` · <b style="color:var(--accent)">📍 ${d._distance.toFixed(1)} km</b>` 
+      ? ` · <b style="color:var(--accent)">[GPS] ${d._distance.toFixed(1)} km</b>` 
       : '';
 
     return `
@@ -1251,7 +1251,7 @@ function showAdminLogin(adminLink) {
   const body = $('modal-body');
   body.innerHTML = `
     <div class="modal-info" style="text-align:center;padding:1.5rem">
-      <div style="font-size:2rem;margin-bottom:.5rem">🔒</div>
+      <div style="font-size:2rem;margin-bottom:.5rem">[Admin]</div>
       <h3 style="color:var(--accent);font-size:1rem;margin-bottom:1rem">Acceso de Administrador</h3>
       <input type="password" id="adminPwdInput" placeholder="Contraseña" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.4rem .6rem;font-size:.9rem;width:200px;outline:none;text-align:center" autofocus>
       <div style="margin-top:.8rem;display:flex;gap:6px;justify-content:center">
@@ -1270,7 +1270,7 @@ function showAdminLogin(adminLink) {
     if (!val) { errorEl.textContent = 'Introduce la contraseña'; errorEl.style.display = ''; return; }
     if (activateAdmin(val)) {
       modal.classList.remove('show');
-      adminLink.textContent = '🔓';
+      adminLink.textContent = 'Admin';
     } else {
       errorEl.textContent = 'Contraseña incorrecta';
       errorEl.style.display = '';
@@ -1295,13 +1295,13 @@ function initLegal() {
   const adminLink = $('link-admin');
   if (adminLink) {
     if (state.adminMode) {
-      adminLink.textContent = '🔓';
+      adminLink.textContent = 'Admin';
     }
     adminLink.onclick = e => {
       e.preventDefault();
       if (state.adminMode) {
         deactivateAdmin();
-        adminLink.textContent = '🔒';
+        adminLink.textContent = 'Admin';
       } else {
         showAdminLogin(adminLink);
       }
