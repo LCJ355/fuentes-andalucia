@@ -907,7 +907,7 @@ async function showModal(d) {
       </div>
       <div class="modal-grid">${gridHtml}</div>
       <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:8px">
-        <button class="btn btn-sec" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
+        <button class="btn ${state.adminMode ? 'btn-sec' : 'btn-accent'}" onclick="window.__toggleAdmin(${id})">${state.adminMode ? 'Admin OFF' : 'Admin ON'}</button>
         ${state.adminMode ? `<button class="btn btn-accent" onclick="window.__openEdit(${id})">Edit</button>` : ''}
       </div>
     </div>
