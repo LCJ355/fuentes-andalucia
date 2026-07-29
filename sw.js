@@ -1,10 +1,10 @@
-const CACHE = 'fuentes-v3';
+const CACHE = 'fuentes-v4';
 const BASE = self.location.pathname.replace(/\/[^/]*$/, '');
 const URLS = [
-  BASE + '/index.html', BASE + '/style.css', BASE + '/main.js', BASE + '/photo_counts.js',
+  BASE + '/index.html', BASE + '/style.css?v=2', BASE + '/main.js?v=2', BASE + '/photo_counts.js?v=2',
   BASE + '/fuentes_complete.json', BASE + '/fuentes_complete.js',
-  BASE + '/manifest.json', BASE + '/lib/leaflet.js', BASE + '/lib/leaflet.css',
-  BASE + '/lib/leaflet.markercluster.js', BASE + '/lib/MarkerCluster.css', BASE + '/lib/MarkerCluster.Default.css'
+  BASE + '/manifest.json', BASE + '/lib/leaflet.js?v=2', BASE + '/lib/leaflet.css?v=2',
+  BASE + '/lib/leaflet.markercluster.js?v=2', BASE + '/lib/MarkerCluster.css?v=2', BASE + '/lib/MarkerCluster.Default.css?v=2'
 ];
 const TILE_CACHE = 'osm-tiles-v1';
 const MAX_TILES = 2000;
