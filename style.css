@@ -46,7 +46,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 /* Map panel */
 .map-panel{flex:1;padding:.4rem;display:flex;flex-direction:column;background:var(--bg);min-width:0}
 #map{flex:1;width:100%;border-radius:var(--radius);border:1px solid var(--border);z-index:1;position:relative}
-.layer-switcher{position:absolute;top:8px;right:8px;bottom:auto;z-index:1000;display:flex;gap:3px;align-items:center;background:var(--panel);padding:5px 6px;border-radius:8px;border:1px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.layer-switcher{position:absolute;bottom:8px;left:8px;top:auto;right:auto;z-index:1000;display:flex;gap:3px;align-items:center;background:var(--panel);padding:5px 6px;border-radius:8px;border:1px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .layer-sep{width:1px;height:16px;background:var(--border);margin:0 1px}
 .zoom-btn{font-weight:700;font-size:.75rem;width:22px;justify-content:center;padding:0}
 .map-info{text-align:center;font-size:.68rem;color:var(--sub);padding:.15rem}
