@@ -16,7 +16,7 @@ const TILE_LAYERS = {
   sat:  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: '&copy; <a href="https://esri.com">Esri</a>', maxZoom: 18 },
 };
 
-const ADMIN_PASSWORD = 'admin';
+const ADMIN_PASSWORD = 'Lucian01';
 const ADMIN_KEY = 'fuentes_admin';
 
 const state = {
