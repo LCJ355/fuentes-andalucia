@@ -1168,8 +1168,13 @@ function initSidePanel() {
 
   if (hamburger) {
     hamburger.onclick = () => {
-      if (panel.classList.contains('collapsed')) openPanel();
-      else closePanel();
+      if (panel.classList.contains('collapsed')) {
+        const hasFilter = state.provincia || state.cuenca || state.searchTerm || state.showFavoritesOnly || state.userCoords;
+        if (!hasFilter || !state.filtered.length) return;
+        openPanel();
+      } else {
+        closePanel();
+      }
     };
   }
 
