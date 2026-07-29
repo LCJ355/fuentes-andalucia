@@ -6,10 +6,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--panel);color:var(--text);z-index:100;border-bottom:1px solid var(--border)}
-.topbar-inner{display:flex;align-items:center;justify-content:space-between;height:100%;padding:0 1rem;gap:.5rem}
-.topbar-brand{display:flex;align-items:center;gap:.4rem;min-width:0}
-.topbar-icon{font-size:1.2rem;flex-shrink:0}
-.topbar h1{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-inner{display:flex;align-items:center;justify-content:center;height:100%;padding:0 1rem;position:relative}
+.topbar h1{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;flex:1}
 
 .topbar-stats{font-size:.72rem;color:var(--muted);display:flex;gap:.3rem;align-items:center;flex-shrink:0}
 .stat-sep{color:var(--sub)}
@@ -194,7 +192,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 }
 #footer-credit{position:fixed;bottom:4px;left:6px;z-index:99;font-size:12px;color:var(--accent);opacity:.6;pointer-events:none;white-space:nowrap}
 .credit-quote{color:#e74c3c;font-size:13px}
-.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;width:var(--touch-min);height:var(--touch-min);align-items:center;justify-content:center;flex-shrink:0}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;width:var(--touch-min);height:var(--touch-min);align-items:center;justify-content:center;flex-shrink:0;position:absolute;left:.5rem;top:50%;transform:translateY(-50%)}
 .hamburger:hover{color:var(--accent)}
 .side-backdrop{display:none;position:fixed;inset:0;z-index:149;background:rgba(0,0,0,.5)}
 .mobile-only{display:none}
