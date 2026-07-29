@@ -99,6 +99,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .legal-links{text-align:center;font-size:.5rem;color:var(--sub);padding:5px 0 2px;border-top:1px solid var(--border);margin-top:5px}
 .legal-links a{color:var(--muted);text-decoration:underline;cursor:pointer;padding:2px 3px}
 .legal-links a:hover{color:var(--accent)}
+.admin-link{font-size:.48rem;opacity:.5}
+.admin-link:hover{opacity:1}
+.admin-badge{position:fixed;top:var(--topbar-h);right:0;z-index:101;background:var(--accent);color:#fff;font-size:.5rem;padding:1px 5px;border-radius:0 0 0 4px;pointer-events:none;opacity:.7}
 #cookie-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--panel);border-top:2px solid var(--accent);padding:8px 12px;display:none;font-size:.68rem;color:var(--text);box-shadow:0 -4px 16px rgba(0,0,0,.4)}
 .cb-content{max-width:800px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .cb-text{flex:1;min-width:200px}

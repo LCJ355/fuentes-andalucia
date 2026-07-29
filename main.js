@@ -16,16 +16,20 @@ const TILE_LAYERS = {
   sat:  { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: '&copy; <a href="https://esri.com">Esri</a>', maxZoom: 18 },
 };
 
+const ADMIN_PASSWORD = 'admin';
+const ADMIN_KEY = 'fuentes_admin';
+
 const state = {
   db: null, allData: [], filtered: [], activeId: null,
   provincia: '', municipio: '', pedania: '', cuenca: '',
   map: null, markers: null, singleLayer: null,
   renderTimer: null,
   searchTerm: '',
-  favorites: (() => { try { return JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'); } catch(e) { return []; } })(),
+  favorites: (() => { try { return JSON.parse(localStorage.getItem('fuentes_favorites') || '[]'); } catch(e) { return []; })(),
   showFavoritesOnly: false,
   userCoords: null,
   userMarker: null,
+  adminMode: (() => { try { return localStorage.getItem(ADMIN_KEY) === '1'; } catch(e) { return false; } })(),
 };
 
 function $(id) { return document.getElementById(id); }
@@ -217,6 +221,8 @@ window.__exportCorrections = exportCorrectionsAction;
 function updateExportBadge() {
   const btn = $('exportCorrectionsBtn');
   if (!btn) return;
+  btn.style.display = state.adminMode ? '' : 'none';
+  if (!state.adminMode) return;
   const cnt = getCorrectionsCount();
   btn.textContent = cnt ? '📥' + cnt : '📥';
   btn.title = cnt ? cnt + ' correcciones pendientes de exportar' : 'Exportar correcciones';
@@ -829,7 +835,7 @@ async function showModal(d) {
       <div class="modal-title">
         ${esc(d.nombre)}
         <button id="modalFavBtn" class="fav-btn-modal${isFav ? ' active' : ''}" onclick="window.__toggleFav(${id})" title="Marcar como favorito">${isFav ? '★' : '☆'}</button>
-        <button class="edit-btn" onclick="window.__openEdit(${id})" title="Editar ficha">✏️</button>
+        ${state.adminMode ? `<button class="edit-btn" onclick="window.__openEdit(${id})" title="Editar ficha">✏️</button>` : ''}
       </div>
       <div class="modal-address">${esc(d.municipio)}${d.pedania ? ', '+esc(d.pedania) : ''}, ${esc(d.provincia)}</div>
       ${address}
@@ -1183,6 +1189,78 @@ function initSidePanel() {
   };
 }
 
+/* ---------- Admin ---------- */
+function updateAdminBadge() {
+  let badge = document.getElementById('adminBadge');
+  if (state.adminMode) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'adminBadge';
+      badge.className = 'admin-badge';
+      badge.textContent = 'ADMIN';
+      document.body.appendChild(badge);
+    }
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
+function activateAdmin(pwd) {
+  if (pwd === ADMIN_PASSWORD) {
+    state.adminMode = true;
+    lsSet(ADMIN_KEY, '1');
+    updateAdminBadge();
+    showToast('Modo admin activado');
+    return true;
+  }
+  showToast('Contraseña incorrecta');
+  return false;
+}
+
+function deactivateAdmin() {
+  state.adminMode = false;
+  lsRemove(ADMIN_KEY);
+  updateAdminBadge();
+  showToast('Modo admin desactivado');
+}
+
+function showAdminLogin(adminLink) {
+  const modal = $('modal');
+  const body = $('modal-body');
+  body.innerHTML = `
+    <div class="modal-info" style="text-align:center;padding:1.5rem">
+      <div style="font-size:2rem;margin-bottom:.5rem">🔒</div>
+      <h3 style="color:var(--accent);font-size:1rem;margin-bottom:1rem">Acceso de Administrador</h3>
+      <input type="password" id="adminPwdInput" placeholder="Contraseña" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.4rem .6rem;font-size:.9rem;width:200px;outline:none;text-align:center" autofocus>
+      <div style="margin-top:.8rem;display:flex;gap:6px;justify-content:center">
+        <button id="adminLoginBtn" class="btn btn-accent">Entrar</button>
+        <button class="btn btn-sec" onclick="document.getElementById('modal').classList.remove('show')">Cancelar</button>
+      </div>
+      <div id="adminLoginError" style="color:#ef4444;font-size:.75rem;margin-top:.5rem;display:none"></div>
+    </div>
+  `;
+  modal.classList.add('show');
+  const input = document.getElementById('adminPwdInput');
+  const loginBtn = document.getElementById('adminLoginBtn');
+  const errorEl = document.getElementById('adminLoginError');
+  function tryLogin() {
+    const val = input.value;
+    if (!val) { errorEl.textContent = 'Introduce la contraseña'; errorEl.style.display = ''; return; }
+    if (activateAdmin(val)) {
+      modal.classList.remove('show');
+      adminLink.textContent = '🔓 Admin';
+    } else {
+      errorEl.textContent = 'Contraseña incorrecta';
+      errorEl.style.display = '';
+      input.value = '';
+      input.focus();
+    }
+  }
+  loginBtn.onclick = tryLogin;
+  input.onkeydown = e => { if (e.key === 'Enter') tryLogin(); };
+  setTimeout(() => input.focus(), 100);
+}
+
 /* ---------- Legal ---------- */
 function initLegal() {
   if (!lsGet('cookies_accepted')) $('cookie-banner').style.display = 'block';
@@ -1191,6 +1269,22 @@ function initLegal() {
   $('link-legal').onclick = e => { e.preventDefault(); showLegal('legal'); };
   $('link-privacy').onclick = e => { e.preventDefault(); showLegal('privacy'); };
   $('link-cookies').onclick = e => { e.preventDefault(); showLegal('cookies'); };
+
+  const adminLink = $('link-admin');
+  if (adminLink) {
+    if (state.adminMode) {
+      adminLink.textContent = '🔓 Admin';
+    }
+    adminLink.onclick = e => {
+      e.preventDefault();
+      if (state.adminMode) {
+        deactivateAdmin();
+        adminLink.textContent = '🔒 Admin';
+      } else {
+        showAdminLogin(adminLink);
+      }
+    };
+  }
 }
 
 function showLegal(section) {
@@ -1252,6 +1346,7 @@ function initSW() {
   updateUI();
   updateExportBadge();
   initLegal();
+  updateAdminBadge();
   initSW();
   hideLoading();
 
