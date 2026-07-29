@@ -892,7 +892,6 @@ async function showModal(d) {
       <div class="modal-title">
         ${esc(d.nombre)}
         <button id="modalFavBtn" class="fav-btn-modal${isFav ? ' active' : ''}" onclick="window.__toggleFav(${id})" title="Marcar como favorito">${isFav ? '★' : '☆'}</button>
-        ${state.adminMode ? `<button class="edit-btn" onclick="window.__openEdit(${id})" title="Editar ficha">[Editar]</button>` : ''}
       </div>
       <div class="modal-address">${esc(d.municipio)}${d.pedania ? ', '+esc(d.pedania) : ''}, ${esc(d.provincia)}</div>
       ${address}
@@ -945,6 +944,7 @@ async function showModal(d) {
         <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
         <span class="edit-actions-note">(solo campos modificados)</span>
         <button onclick="window.__cancelEdit()" class="btn btn-sec">Cancelar</button>
+        <button onclick="deactivateAdmin();document.getElementById('modal').classList.remove('show')" class="btn btn-sec" style="margin-left:auto;color:var(--sub);font-size:.6rem">Salir admin</button>
         ${getEditAction(id) ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">[Deshacer]</button>` : ''}
       </div>
     </div>
@@ -1264,9 +1264,7 @@ function initSidePanel() {
 /* ---------- Admin ---------- */
 window.__toggleAdmin = function(id) {
   if (state.adminMode) {
-    deactivateAdmin();
-    document.getElementById('modal').classList.remove('show');
-    showToast('Admin desactivado');
+    window.__openEdit(id);
   } else {
     showAdminLogin();
   }
