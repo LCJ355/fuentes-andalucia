@@ -2,13 +2,13 @@
 'use strict';
 
 const DB_NAME = 'FuentesDB';
-const DB_VER = 1;
+const DB_VER = 2;
 const STORE = 'fuentes';
+const PHOTO_EDIT_STORE = 'photo_edits';
 const DATA_URL = 'fuentes_complete.json';
 const DATA_JS = 'fuentes_complete.js';
 const DATA_VER_KEY = 'fuentes_data_ver';
 const DATA_VER = 6;
-const IMG_PATH = 'images';
 const TILE_LAYERS = {
   osm:  { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; <a href="https://osm.org/copyright">OSM</a>', maxZoom: 19 },
   topo: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attr: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>', maxZoom: 17 },
@@ -24,8 +24,10 @@ const state = {
   provincia: '', municipio: '', pedania: '', cuenca: '',
   map: null, markers: null, singleLayer: null,
   renderTimer: null,
+  fitTimer: null,
   searchTerm: '',
   userCoords: null,
+  photoEdits: {},
   adminMode: (() => { try { return localStorage.getItem(ADMIN_KEY) === '1'; } catch(e) { return false; } })(),
 };
 
@@ -123,6 +125,11 @@ function deleteEditAction(id) {
   }
   delete h[sid];
   saveEditsHash(h);
+  // Clear photo edits for this source
+  if (state.photoEdits[id]) {
+    delete state.photoEdits[id];
+    clearPhotoEditRec(state.db, id);
+  }
 }
 
 function getEditAction(id) {
@@ -131,7 +138,9 @@ function getEditAction(id) {
 }
 
 function getCorrectionsCount() {
-  return Object.keys(getEditsHash()).length;
+  const ids = new Set(Object.keys(getEditsHash()));
+  for (const k of Object.keys(state.photoEdits)) ids.add(k);
+  return ids.size;
 }
 
 function applyStoredEdits() {
@@ -151,32 +160,101 @@ function applyStoredEdits() {
 
 let __dirHandle = null;
 
+async function writeFileInDir(dirHandle, name, blob) {
+  const fh = await dirHandle.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+}
+
+async function writeFile(name, blob) {
+  await writeFileInDir(__dirHandle, name, blob);
+}
+
+// Writes added photos, deletes removed ones (renumbering), and regenerates photo_counts.js
+async function applyPhotoEditsToDisk() {
+  const edits = state.photoEdits;
+  const ids = Object.keys(edits);
+  if (!ids.length) return;
+
+  const imgsHandle = await __dirHandle.getDirectoryHandle('images', { create: true });
+  const finalCounts = Object.assign({}, window.PHOTO_COUNTS || {});
+  let processed = 0;
+
+  for (const id of ids) {
+    const pe = edits[id];
+    const removeSet = new Set((pe.remove || []).map(Number));
+    const idNum = parseInt(id);
+
+    // List existing files cf_ID_*.jpg
+    const files = {};
+    for await (const [name, handle] of imgsHandle.entries()) {
+      const m = /^cf_(\d+)_(\d+)\.(jpg|jpeg|png)$/i.exec(name);
+      if (m && parseInt(m[1]) === idNum) files[parseInt(m[2])] = { name, handle };
+    }
+
+    // Delete marked photos
+    for (const n of removeSet) {
+      if (files[n]) {
+        await imgsHandle.removeEntry(files[n].name);
+        delete files[n];
+      }
+    }
+
+    // Renumber remaining files sequentially
+    const remaining = Object.keys(files).map(Number).sort((a, b) => a - b);
+    let next = 1;
+    for (const n of remaining) {
+      if (n !== next) {
+        const file = await files[n].handle.getFile();
+        const bytes = await file.arrayBuffer();
+        await writeFileInDir(imgsHandle, `cf_${idNum}_${next}.jpg`, new Blob([bytes], { type: file.type || 'image/jpeg' }));
+        await imgsHandle.removeEntry(files[n].name);
+      }
+      next++;
+    }
+
+    // Write added photos at the next free indices
+    for (const a of (pe.add || [])) {
+      await writeFileInDir(imgsHandle, `cf_${idNum}_${next}.jpg`,
+        new Blob([base64ToBytes(a.data)], { type: dataUrlMime(a.data) }));
+      next++;
+    }
+
+    if (next - 1 > 0) finalCounts[id] = next - 1;
+    else delete finalCounts[id];
+
+    processed++;
+    if (processed % 10 === 0) showToast(`Guardando fotos... ${processed}/${ids.length}`);
+  }
+
+  const jsStr = 'window.PHOTO_COUNTS = ' + JSON.stringify(finalCounts) + ';\n';
+  await writeFile('photo_counts.js', new Blob([jsStr], { type: 'text/javascript' }));
+  showToast('Fotos guardadas (' + ids.length + ' fuentes)');
+}
+
 async function exportCorrectionsAction() {
   const h = getEditsHash();
   const arr = Object.entries(h).map(([id, edit]) => ({
     id: parseInt(id), changes: edit.changes, timestamp: edit.timestamp
   }));
-  if (!arr.length) { showToast('No hay correcciones para exportar'); return; }
+  const photoIds = Object.keys(state.photoEdits);
+  if (!arr.length && !photoIds.length) { showToast('No hay correcciones para exportar'); return; }
 
   if (!('showDirectoryPicker' in window)) {
-    // Fallback: download via URL
+    // Fallback: download via URL (text corrections only)
     const blob = new Blob([JSON.stringify(arr, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'correcciones.json'; a.click();
     URL.revokeObjectURL(url);
-    showToast(arr.length + ' correcciones exportadas. Coloca el archivo en la carpeta del proyecto y ejecuta _aplicar.bat');
+    if (photoIds.length) {
+      showToast('Correcciones de texto exportadas. Las fotos requieren Chromium para guardarse en disco.');
+    } else {
+      showToast(arr.length + ' correcciones exportadas. Coloca el archivo en la carpeta del proyecto y ejecuta _aplicar.bat');
+    }
     lsRemove(EDITS_KEY);
-    updateExportBadge();
     return;
-  }
-
-  // Helper: write a file via FS API
-  async function writeFile(name, blob) {
-    const fh = await __dirHandle.getFileHandle(name, { create: true });
-    const w = await fh.createWritable();
-    await w.write(blob);
-    await w.close();
   }
 
   try {
@@ -204,9 +282,12 @@ async function exportCorrectionsAction() {
     const jsStr = 'window.FUENTES_DATA = ' + jsonStr + ';\n';
     await writeFile('fuentes_complete.js', new Blob([jsStr], { type: 'text/javascript' }));
 
+    // 4. Apply photo edits (write/remove/renumber images + photo_counts.js)
+    if (photoIds.length) await applyPhotoEditsToDisk();
+
     // Done — clear edits and reload
     lsRemove(EDITS_KEY);
-    updateExportBadge();
+    await removeAllPhotoEdits();
     showToast(arr.length + ' correcciones guardadas permanentemente');
     setTimeout(() => { location.reload(); }, 1500);
   } catch(e) {
@@ -216,10 +297,6 @@ async function exportCorrectionsAction() {
 }
 
 window.__exportCorrections = exportCorrectionsAction;
-
-function updateExportBadge() {
-  // Export button is now in the modal; updates handled inline on modal creation
-}
 
 window.__openEdit = function(id) {
   __editingId = id;
@@ -236,12 +313,18 @@ window.__openEdit = function(id) {
   if (fileInp && prev) {
     fileInp.value = '';
     prev.innerHTML = '';
+    // Show already-added photos (pending export)
+    const existing = (state.photoEdits[id] && state.photoEdits[id].add) || [];
+    for (const a of existing) {
+      const thumb = document.createElement('img');
+      thumb.src = a.data;
+      thumb.style.cssText = 'width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--accent)';
+      thumb.title = (a.name || 'foto añadida') + ' (pendiente de exportar)';
+      prev.appendChild(thumb);
+    }
     fileInp.onchange = function() {
-      prev.innerHTML = '';
-      __pendingPhotos = [];
       const files = Array.from(this.files);
-      let loaded = 0;
-      files.forEach((f, idx) => {
+      files.forEach(f => {
         const reader = new FileReader();
         reader.onload = function(e) {
           __pendingPhotos.push({ name: f.name, data: e.target.result });
@@ -250,7 +333,6 @@ window.__openEdit = function(id) {
           thumb.style.cssText = 'width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border)';
           thumb.title = f.name;
           prev.appendChild(thumb);
-          loaded++;
         };
         reader.readAsDataURL(f);
       });
@@ -270,10 +352,10 @@ window.__saveEdit = function(id) {
   const form = $('modal-edit-form');
   const inputs = form.querySelectorAll('[name]');
   const changes = {};
-  const photoChanges = {};
+  const removeIdx = [];
   for (const inp of inputs) {
     if (inp.name.startsWith('_photo_remove_')) {
-      if (inp.checked) photoChanges[inp.name] = true;
+      if (inp.checked) removeIdx.push(parseInt(inp.name.replace('_photo_remove_', '')));
       continue;
     }
     const val = inp.type === 'number' ? (inp.value === '' ? null : Number(inp.value)) : inp.value;
@@ -281,28 +363,29 @@ window.__saveEdit = function(id) {
       changes[inp.name] = val;
     }
   }
-  if (window.__pendingPhotos && window.__pendingPhotos.length) {
-    photoChanges._add = window.__pendingPhotos.map(p => ({ name: p.name, data: p.data }));
-  }
-  if (Object.keys(photoChanges).length) changes._photos = photoChanges;
-  if (!Object.keys(changes).length) {
+  const adds = (window.__pendingPhotos && window.__pendingPhotos.length) ? window.__pendingPhotos : [];
+  const hasPhotoOps = removeIdx.length > 0 || adds.length > 0;
+  if (!Object.keys(changes).length && !hasPhotoOps) {
     showToast('No hay cambios que guardar');
     return;
   }
-  // Capture original values BEFORE applying changes
-  const originals = {};
-  for (const k of Object.keys(changes)) {
-    originals[k] = d[k];
+  if (hasPhotoOps) {
+    savePhotoEditOps(id, removeIdx, adds);
   }
-  // Apply to data in memory (skip photo keys)
-  for (const [k, v] of Object.entries(changes)) {
-    if (k === '_photos') continue;
-    d[k] = (v === null || v === '') ? null : v;
+  if (Object.keys(changes).length) {
+    // Capture original values BEFORE applying changes
+    const originals = {};
+    for (const k of Object.keys(changes)) {
+      originals[k] = d[k];
+    }
+    // Apply to data in memory
+    for (const [k, v] of Object.entries(changes)) {
+      d[k] = (v === null || v === '') ? null : v;
+    }
+    saveEditAction(id, changes, originals);
   }
-  saveEditAction(id, changes, originals);
   window.__cancelEdit();
   showModal(d);
-  updateExportBadge();
   showToast('Corrección guardada');
 };
 
@@ -310,7 +393,6 @@ window.__deleteEdit = function(id) {
   deleteEditAction(id);
   const d = state.allData.find(x => x.id_fuente === id);
   if (d) showModal(d);
-  updateExportBadge();
   showToast('Edición deshecha');
 };
 
@@ -341,13 +423,6 @@ const EDIT_FIELDS = [
 
 /* ---------- End Edit System ---------- */
 
-const PROV_CAPITALS = {
-  'Almería': [36.8381, -2.4597], 'Cádiz': [36.5271, -6.2886],
-  'Córdoba': [37.8882, -4.7794], 'Granada': [37.1773, -3.5986],
-  'Huelva': [37.2614, -6.9447], 'Jaén': [37.7796, -3.7849],
-  'Málaga': [36.7213, -4.4214], 'Sevilla': [37.3886, -5.9823]
-};
-
 /* ---------- IndexedDB ---------- */
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -358,6 +433,9 @@ function openDB() {
         const os = db.createObjectStore(STORE, { keyPath: 'id_fuente' });
         os.createIndex('provincia', 'provincia', { unique: false });
         os.createIndex('tipo_surgencia', 'tipo_surgencia', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(PHOTO_EDIT_STORE)) {
+        db.createObjectStore(PHOTO_EDIT_STORE, { keyPath: 'id' });
       }
     };
     req.onsuccess = e => resolve(e.target.result);
@@ -375,45 +453,153 @@ function getAllFromDB(db) {
 }
 
 function populateDB(db, data) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    const os = tx.objectStore(STORE);
-    let count = 0;
-    const total = data.length;
-    for (const item of data) {
-      const req = os.put(item);
-      req.onsuccess = () => {
-        count++;
-        if (count % 250 === 0 || count === total) {
-          showLoading(`Cargando base de datos (${Math.round(count / total * 100)}%)...`);
-        }
-      };
+  const BATCH = 500;
+  const total = data.length;
+  let count = 0;
+  return (async () => {
+    for (let i = 0; i < total; i += BATCH) {
+      const chunk = data.slice(i, i + BATCH);
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        const os = tx.objectStore(STORE);
+        for (const item of chunk) os.put(item);
+        tx.oncomplete = () => {
+          count += chunk.length;
+          if (count % 250 === 0 || count === total) {
+            showLoading(`Cargando base de datos (${Math.round(count / total * 100)}%)...`);
+          }
+          resolve();
+        };
+        tx.onerror = e => reject(tx.error || e.target.error);
+      });
     }
-    tx.oncomplete = () => resolve(total);
+    return total;
+  })();
+}
+
+/* ---------- Photo Edits (IndexedDB) ---------- */
+function getAllPhotoEdits(db) {
+  return new Promise((resolve, reject) => {
+    if (!db) { resolve([]); return; }
+    const tx = db.transaction(PHOTO_EDIT_STORE, 'readonly');
+    const req = tx.objectStore(PHOTO_EDIT_STORE).getAll();
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+function savePhotoEditRec(db, rec) {
+  return new Promise((resolve, reject) => {
+    if (!db) { resolve(); return; }
+    const tx = db.transaction(PHOTO_EDIT_STORE, 'readwrite');
+    tx.objectStore(PHOTO_EDIT_STORE).put(rec);
+    tx.oncomplete = resolve;
     tx.onerror = e => reject(tx.error || e.target.error);
   });
+}
+
+function clearPhotoEditRec(db, id) {
+  return new Promise((resolve, reject) => {
+    if (!db) { resolve(); return; }
+    const tx = db.transaction(PHOTO_EDIT_STORE, 'readwrite');
+    tx.objectStore(PHOTO_EDIT_STORE).delete(parseInt(id));
+    tx.oncomplete = resolve;
+    tx.onerror = e => reject(tx.error || e.target.error);
+  });
+}
+
+function clearAllPhotoEdits(db) {
+  return new Promise((resolve, reject) => {
+    if (!db) { resolve(); return; }
+    const tx = db.transaction(PHOTO_EDIT_STORE, 'readwrite');
+    tx.objectStore(PHOTO_EDIT_STORE).clear();
+    tx.oncomplete = resolve;
+    tx.onerror = e => reject(tx.error || e.target.error);
+  });
+}
+
+function savePhotoEditOps(id, removeIdx, adds) {
+  const pe = state.photoEdits[id] || { remove: [], add: [] };
+  pe.remove = [...new Set([...pe.remove, ...removeIdx])];
+  pe.add = pe.add.concat(adds || []);
+  state.photoEdits[id] = pe;
+  if (state.db) {
+    savePhotoEditRec(state.db, { id: parseInt(id), remove: pe.remove, add: pe.add })
+      .catch(() => showToast('No se pudieron guardar las fotos en IndexedDB'));
+  } else {
+    showToast('Sin IndexedDB: las fotos se mantienen solo en esta sesión');
+  }
+}
+
+async function removeAllPhotoEdits() {
+  state.photoEdits = {};
+  await clearAllPhotoEdits(state.db);
+}
+
+function getBasePhotoCount(id) {
+  if (typeof window.PHOTO_COUNTS !== 'undefined') {
+    return (id in window.PHOTO_COUNTS) ? window.PHOTO_COUNTS[id] : 0;
+  }
+  return 0;
+}
+
+function buildEffectivePhotoList(id, baseCount) {
+  const pe = state.photoEdits[id];
+  const removeSet = new Set((pe && pe.remove || []).map(Number));
+  const list = [];
+  for (let n = 1; n <= baseCount; n++) {
+    if (!removeSet.has(n)) list.push(`images/cf_${id}_${n}.jpg`);
+  }
+  for (const a of (pe && pe.add || [])) list.push(a.data);
+  return list;
+}
+
+function getSidePanelPhotoHTML(id) {
+  const base = getBasePhotoCount(id) || (typeof window.PHOTO_COUNTS === 'undefined' ? 1 : 0);
+  const list = buildEffectivePhotoList(id, base);
+  if (!list.length) {
+    return '<div class="side-item-img" style="display:flex;align-items:center;justify-content:center;font-size:.7rem;background:var(--bg);color:var(--sub)">~</div>';
+  }
+  return `<img src="${esc(list[0])}" onerror="this.style.display='none'" class="side-item-img">`;
+}
+
+function base64ToBytes(dataUrl) {
+  const comma = dataUrl.indexOf(',');
+  const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function dataUrlMime(dataUrl) {
+  const m = /^data:([^;,]+)/.exec(dataUrl);
+  return m ? m[1] : 'image/jpeg';
 }
 
 function loadDataViaScript() {
   return new Promise((resolve, reject) => {
     if (window.FUENTES_DATA) { resolve(window.FUENTES_DATA); return; }
-    const handler = e => {
+    let settled = false;
+    let timer = null;
+    const done = (val, err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       document.removeEventListener('fuentesReady', handler);
-      resolve(e.detail);
+      if (err) reject(err); else resolve(val);
     };
+    const handler = e => done(e.detail);
     document.addEventListener('fuentesReady', handler);
     const s = document.createElement('script');
     s.src = DATA_JS;
-    s.onerror = () => { document.removeEventListener('fuentesReady', handler); reject(new Error('Error al cargar '+DATA_JS)); };
+    s.onerror = () => done(null, new Error('Error al cargar '+DATA_JS));
     s.onload = () => {
       // Fallback: if event never fired but window.FUENTES_DATA is set
-      if (window.FUENTES_DATA) {
-        document.removeEventListener('fuentesReady', handler);
-        resolve(window.FUENTES_DATA);
-      }
+      if (window.FUENTES_DATA) done(window.FUENTES_DATA);
     };
     document.head.appendChild(s);
-    setTimeout(() => { document.removeEventListener('fuentesReady', handler); reject(new Error('Timeout cargando '+DATA_JS)); }, 60000);
+    timer = setTimeout(() => done(null, new Error('Timeout cargando '+DATA_JS)), 60000);
   });
 }
 
@@ -454,6 +640,13 @@ async function initData() {
   if (state.db) state.allData = await getAllFromDB(state.db);
   if (!state.allData.length) throw new Error('No hay datos disponibles');
 
+  // Load stored photo edits
+  state.photoEdits = {};
+  try {
+    const pes = await getAllPhotoEdits(state.db);
+    for (const p of pes) state.photoEdits[p.id] = { remove: p.remove || [], add: p.add || [] };
+  } catch(e) {}
+
   // Pedania cleanup: if it matches municipio, clear it
   for (const d of state.allData) {
     if (d.pedania && d.municipio && d.pedania.trim().toLowerCase() === d.municipio.trim().toLowerCase()) {
@@ -473,8 +666,9 @@ function applyFilters() {
     if (state.pedania && (d.pedania||'') !== state.pedania) return false;
     if (state.cuenca && d.cuenca !== state.cuenca) return false;
     if (state.searchTerm) {
-      const nameNorm = normalizeStr(d.nombre);
-      if (!nameNorm.includes(state.searchTerm)) return false;
+      const searchable = [d.nombre, d.municipio, d.pedania, d.cuenca, d.subcuenca, d.rio_arroyo, d.descripcion, d.tipo_surgencia]
+        .map(normalizeStr).join(' ');
+      if (!searchable.includes(state.searchTerm)) return false;
     }
     return true;
   });
@@ -750,8 +944,6 @@ function fitToMunicipio(muni) {
 }
 
 /* ---------- Cards ---------- */
-function renderCards() {}
-
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -792,22 +984,21 @@ async function showModal(d) {
   const body = $('modal-body');
   const modal = $('modal');
   const id = d.id_fuente;
-  const hasPhotoCounts = typeof window.PHOTO_COUNTS !== 'undefined';
-  
-  let maxPhotos = 0;
-  let useFallbackOnError = false;
-  
-  if (hasPhotoCounts) {
-    if (id in window.PHOTO_COUNTS) {
-      maxPhotos = window.PHOTO_COUNTS[id];
-    } else {
-      maxPhotos = 1; // Intentar cargar al menos la primera foto
-      useFallbackOnError = true;
-    }
-  } else {
-    maxPhotos = 5; // Cargar hasta 5 con validación onerror si falla la carga del script
-    useFallbackOnError = true;
-  }
+  const gid = id;
+
+  // ---- Photo model ----
+  const countsKnown = typeof window.PHOTO_COUNTS !== 'undefined';
+  const baseCount = countsKnown ? (id in window.PHOTO_COUNTS ? window.PHOTO_COUNTS[id] : 0) : 0;
+  const pe = state.photoEdits[id];
+  const removeSet = new Set((pe && pe.remove || []).map(Number));
+  const additions = (pe && pe.add) || [];
+  const hasAdds = additions.length > 0;
+  // Detect by preload when the count is unknown (stale/missing PHOTO_COUNTS)
+  const needDetect = !countsKnown || (!(id in window.PHOTO_COUNTS) && !hasAdds);
+
+  const photoList = needDetect ? [] : buildEffectivePhotoList(id, baseCount);
+  const removableBase = needDetect ? [] : Array.from({ length: baseCount }, (_, i) => i + 1).filter(n => !removeSet.has(n));
+  const hasEdits = !!(getEditAction(id) || state.photoEdits[id]);
 
   const fields = [
     { l:'Provincia', v:d.provincia }, { l:'Municipio', v:d.municipio }, { l:'Pedanía', v:d.pedania },
@@ -834,27 +1025,7 @@ async function showModal(d) {
     </div>`;
   }
 
-  let thumbs = '';
-  let mainPhotoHtml = '';
-  if (maxPhotos > 0) {
-    const thumbsArray = [];
-    for (let n = 1; n <= maxPhotos; n++) {
-      const onerrorAttr = useFallbackOnError ? ` onerror="this.style.display='none';this.classList.add('missing-thumb')"` : '';
-      thumbsArray.push(`<img src="images/cf_${id}_${n}.jpg"${onerrorAttr} class="gal-thumb${n===1?' active':''}" data-idx="${n-1}" onclick="window.__galGo(${n-1})">`);
-    }
-    thumbs = thumbsArray.join('');
-    
-    const mainOnerror = useFallbackOnError ? ` onerror="this.style.display='none';this.classList.add('missing-main')"` : '';
-    mainPhotoHtml = `
-      <button class="gal-arrow gal-prev" onclick="window.__galMove(-1)">&#9664;</button>
-      <div class="gal-main-wrap">
-        <img class="modal-img-inline" src="images/cf_${id}_1.jpg"${mainOnerror} alt="${esc(d.nombre)}" id="modal-main-img" onclick="window.__galFs()">
-        <div class="gal-counter" id="gal-counter" style="${maxPhotos > 1 ? '' : 'display:none'}">1/${maxPhotos}</div>
-        <button class="gal-fs-btn" onclick="event.stopPropagation();window.__galFs()" title="Ver a pantalla completa">⛶</button>
-      </div>
-      <button class="gal-arrow gal-next" onclick="window.__galMove(1)">&#9654;</button>
-    `;
-  }
+  const galleryHtml = photoList.length ? buildGalleryHtml(photoList, d.nombre) : '<div class="gal-none">Sin fotos</div>';
 
   body.innerHTML = `
     <div id="modal-info-view">
@@ -868,18 +1039,15 @@ async function showModal(d) {
         <div class="modal-desc-text">
           ${d.descripcion ? `<div class="desc-label">Descripción</div><div class="desc-value">${esc(d.descripcion)}</div>` : ''}
         </div>
-        ${maxPhotos > 0 ? `
         <div class="modal-desc-photo">
-          ${mainPhotoHtml}
+          <div id="modal-gallery">${galleryHtml}</div>
         </div>
-        <div class="gal-thumbs" id="gal-thumbs">${thumbs}</div>
-        ` : ''}
       </div>
       <div class="modal-grid">${gridHtml}</div>
       <div style="display:flex;justify-content:flex-end;gap:4px;margin-top:8px">
         ${state.adminMode ? `<button class="btn btn-sec" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin OFF</button>
         <button class="btn btn-accent" onclick="window.__openEdit(${id})" style="font-size:.65rem">Edit</button>
-        ${getCorrectionsCount() ? `<button class="btn btn-sec" onclick="window.__exportCorrections()" style="font-size:.65rem">[${getCorrectionsCount()}]</button>` : ''}` : `<button class="btn btn-accent" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin ON</button>`}
+        ${getCorrectionsCount() ? `<button class="btn btn-sec" onclick="window.__exportCorrections()" style="font-size:.65rem">Exportar (${getCorrectionsCount()})</button>` : ''}` : `<button class="btn btn-accent" onclick="window.__toggleAdmin(${id})" style="font-size:.65rem">Admin ON</button>`}
       </div>
     </div>
     </div>
@@ -906,10 +1074,11 @@ async function showModal(d) {
       </div>
       <div class="edit-photo-section" style="margin-top:8px;padding:6px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--border)">
         <div style="font-size:.7rem;font-weight:600;color:var(--accent);margin-bottom:4px">Fotos</div>
-        ${maxPhotos > 0 ? `<div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Marcar para eliminar:</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${Array.from({length:maxPhotos},(_,i)=>`
-          <label style="font-size:.6rem;display:flex;align-items:center;gap:2px;color:var(--text)"><input type="checkbox" name="_photo_remove_${i+1}" value="1"> foto ${i+1}</label>
-        `).join('')}</div>` : '<div style="font-size:.6rem;color:var(--sub);margin-bottom:4px">Sin fotos actualmente</div>'}
+        ${removableBase.length ? `<div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Marcar para eliminar:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${removableBase.map(n => `
+          <label style="font-size:.6rem;display:flex;align-items:center;gap:2px;color:var(--text)"><input type="checkbox" name="_photo_remove_${n}" value="1"> foto ${n}</label>
+        `).join('')}</div>` : (additions.length ? '' : '<div style="font-size:.6rem;color:var(--sub);margin-bottom:4px">Sin fotos actualmente</div>')}
+        ${additions.length ? `<div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Fotos añadidas pendientes de exportar: ${additions.length}</div>` : ''}
         <div style="font-size:.6rem;color:var(--muted);margin-bottom:3px">Añadir fotos:</div>
         <input type="file" accept="image/*" multiple id="photoAddInput" style="font-size:.65rem;color:var(--text);max-width:100%">
         <div id="photoPreview" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
@@ -918,25 +1087,26 @@ async function showModal(d) {
         <button onclick="window.__saveEdit(${id})" class="btn btn-accent">Guardar</button>
         <span class="edit-actions-note">(solo campos modificados)</span>
         <button onclick="window.__cancelEdit()" class="btn btn-sec">Cancelar</button>
-        ${getEditAction(id) ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">[Deshacer]</button>` : ''}
+        ${hasEdits ? `<button onclick="window.__deleteEdit(${id})" class="btn btn-del" style="margin-left:auto">[Deshacer]</button>` : ''}
       </div>
     </div>
   `;
 
   /*---- gallery state ----*/
-  const gid = id;
+  window.__galList = photoList;
   window.__galIdx = 0;
-  window.__galN = maxPhotos;
+  window.__galN = photoList.length;
   window.__galId = gid;
   window.__galGo = function(i) {
     if (window.__galId !== gid) return;
     window.__galIdx = i;
+    const list = window.__galList || [];
     const img = document.getElementById('modal-main-img');
     if (img) {
-      img.src = `images/cf_${gid}_${i+1}.jpg`;
-      img.style.display = '';
+      if (list[i]) { img.src = list[i]; img.style.display = ''; }
+      else img.style.display = 'none';
     }
-    document.querySelectorAll('.gal-thumb').forEach((t,j) => t.classList.toggle('active', j===i));
+    document.querySelectorAll('#modal-gallery .gal-thumb').forEach((t, j) => t.classList.toggle('active', j === i));
     updateCounter();
   };
   window.__galMove = function(d) {
@@ -961,33 +1131,25 @@ async function showModal(d) {
       document.getElementById('fullscreen-photo').classList.add('show');
     }
   };
+  if (window.__galN) window.__galGo(0);
 
-  if (useFallbackOnError) {
-    // Detect actual photo count using preload
+  if (needDetect) {
+    // Detect actual base photos by preload, then apply edits
     let loaded = 0;
-    const photos = [];
+    const found = [];
     function onAllChecked() {
-      window.__galN = photos.length;
-      const mainImg = document.getElementById('modal-main-img');
-      if (photos.length === 0) {
-        if (mainImg) mainImg.style.display = 'none';
-        const photoWrap = document.querySelector('.modal-desc-photo');
-        if (photoWrap) photoWrap.style.display = 'none';
-      } else if (mainImg) {
-        mainImg.src = `images/cf_${gid}_${photos[0]}.jpg`;
-        mainImg.style.display = '';
-        window.__galGo(0);
-      }
-      document.querySelectorAll('.gal-thumb').forEach(t => t.style.display = 'none');
-      photos.forEach(i => {
-        const t = document.querySelector(`.gal-thumb[data-idx="${i - 1}"]`);
-        if (t) t.style.display = '';
-      });
+      const list = found.filter(n => !removeSet.has(n)).map(n => `images/cf_${gid}_${n}.jpg`);
+      for (const a of additions) list.push(a.data);
+      window.__galList = list;
+      window.__galId = gid;
+      window.__galIdx = 0;
+      window.__galN = list.length;
+      renderGalleryDOM(list, d.nombre);
       updateCounter();
     }
     for (let i = 1; i <= 5; i++) {
       const p = new Image();
-      p.onload = () => { loaded++; photos.push(i); if (loaded === 5) onAllChecked(); };
+      p.onload = () => { loaded++; found.push(i); if (loaded === 5) onAllChecked(); };
       p.onerror = () => { loaded++; if (loaded === 5) onAllChecked(); };
       p.src = `images/cf_${gid}_${i}.jpg`;
     }
@@ -995,6 +1157,27 @@ async function showModal(d) {
 
   modal.classList.add('show');
   modal.scrollTop = 0;
+}
+
+function buildGalleryHtml(list, nombre) {
+  const thumbs = list.map((src, i) =>
+    `<img src="${esc(src)}" class="gal-thumb${i===0?' active':''}" data-idx="${i}" onclick="window.__galGo(${i})">`
+  ).join('');
+  return `
+    <button class="gal-arrow gal-prev" onclick="window.__galMove(-1)">&#9664;</button>
+    <div class="gal-main-wrap">
+      <img class="modal-img-inline" src="${esc(list[0])}" alt="${esc(nombre)}" id="modal-main-img" onclick="window.__galFs()">
+      <div class="gal-counter" id="gal-counter" style="${list.length > 1 ? '' : 'display:none'}">1/${list.length}</div>
+      <button class="gal-fs-btn" onclick="event.stopPropagation();window.__galFs()" title="Ver a pantalla completa">⛶</button>
+    </div>
+    <button class="gal-arrow gal-next" onclick="window.__galMove(1)">&#9654;</button>
+    <div class="gal-thumbs" id="gal-thumbs">${thumbs}</div>`;
+}
+
+function renderGalleryDOM(list, nombre) {
+  const wrap = document.getElementById('modal-gallery');
+  if (!wrap) return;
+  wrap.innerHTML = list.length ? buildGalleryHtml(list, nombre) : '<div class="gal-none">Sin fotos</div>';
 }
 
 /* ---------- Side Panel ---------- */
@@ -1015,16 +1198,9 @@ function renderSidePanel() {
   const itemsToRender = state.filtered.slice(0, maxRender);
   
   let listHtml = itemsToRender.map(d => {
-    const hasPhotoCounts = typeof window.PHOTO_COUNTS !== 'undefined';
-    const maxPhotos = hasPhotoCounts 
-      ? (window.PHOTO_COUNTS[d.id_fuente] || 0) 
-      : 1; // Fallback: asume 1 si no está cargado
+    const imgHtml = getSidePanelPhotoHTML(d.id_fuente);
       
-    const imgHtml = maxPhotos > 0 
-      ? `<img src="images/cf_${d.id_fuente}_1.jpg" onerror="this.style.display='none'" class="side-item-img">`
-      : `<div class="side-item-img" style="display:flex;align-items:center;justify-content:center;font-size:.7rem;background:var(--bg);color:var(--sub)">~</div>`;
-      
-    const distText = d._distance && d._distance !== Infinity 
+    const distText = d._distance != null && d._distance !== Infinity 
       ? ` · <b style="color:var(--accent)">[GPS] ${d._distance.toFixed(1)} km</b>` 
       : '';
 
@@ -1173,6 +1349,10 @@ function buildFilters() {
   $('textSearch').addEventListener('input', e => {
     state.searchTerm = normalizeStr(e.target.value);
     updateUI();
+    clearTimeout(state.fitTimer);
+    state.fitTimer = setTimeout(() => {
+      if (state.searchTerm && state.filtered.length) fitToFiltered();
+    }, 350);
   });
 
   populateMuniPed();
@@ -1237,14 +1417,10 @@ window.__toggleAdmin = function(id) {
   }
 };
 
-function updateAdminBadge() {
-}
-
 function activateAdmin(pwd) {
   if (pwd === ADMIN_PASSWORD) {
     state.adminMode = true;
     lsSet(ADMIN_KEY, '1');
-    updateAdminBadge();
     showToast('Modo admin activado');
     return true;
   }
@@ -1255,7 +1431,6 @@ function activateAdmin(pwd) {
 function deactivateAdmin() {
   state.adminMode = false;
   lsRemove(ADMIN_KEY);
-  updateAdminBadge();
   showToast('Modo admin desactivado');
 }
 
@@ -1362,9 +1537,7 @@ function initSW() {
   buildFilters();
   initSidePanel();
   updateUI();
-  updateExportBadge();
   initLegal();
-  updateAdminBadge();
   initSW();
   hideLoading();
 

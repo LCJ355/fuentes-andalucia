@@ -84,6 +84,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .gal-thumbs{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
 .gal-thumb{height:36px;width:auto;cursor:pointer;border-radius:3px;border:2px solid transparent;transition:border .12s;object-fit:cover}
 .gal-thumb.active{border-color:var(--accent)}
+.gal-none{font-size:.72rem;color:var(--sub);padding:.5rem 0;text-align:center}
 /* Fullscreen photo overlay */
 .fullscreen-photo{display:none;position:fixed;z-index:300;inset:0;background:rgba(0,0,0,.92);align-items:center;justify-content:center;cursor:zoom-out}
 .fullscreen-photo.show{display:flex}

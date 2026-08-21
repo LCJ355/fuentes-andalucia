@@ -55,9 +55,10 @@ def main():
         set_clauses = []
         params = []
         for field, val in changes.items():
-            if field in ('lat', 'lon', 'id_fuente'):
+            # Skip coordinates, keys and any internal/app-only keys (photos, etc.)
+            if field in ('lat', 'lon', 'id_fuente') or field.startswith('_'):
                 continue
-            if val is None:
+            if val is None or (isinstance(val, str) and val == ''):
                 set_clauses.append(f'[{field}] = NULL')
             elif isinstance(val, str):
                 set_clauses.append(f'[{field}] = ?')

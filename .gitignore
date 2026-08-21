@@ -3,6 +3,9 @@ FUENTES_Andalucia.accdb
 .DS_Store
 Thumbs.db
 node_modules/
+__pycache__/
+*.pyc
 test_out.jpg
 test_*.js
 _test_one.js
+new-session-*.json

@@ -42,19 +42,26 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Everything else -> cache-first
-  e.respondWith(cacheFirst(e.request));
+  // Everything else -> stale-while-revalidate (keeps app/data fresh)
+  e.respondWith(staleWhileRevalidate(e.request));
 });
 
-async function cacheFirst(req) {
+async function staleWhileRevalidate(req) {
   const cached = await caches.match(req);
-  if (cached) return cached;
+  const refresh = fetch(req).then(resp => {
+    if (resp && resp.ok) {
+      return caches.open(CACHE).then(c => c.put(req, resp.clone()));
+    }
+  }).catch(() => {});
+  if (cached) {
+    refresh; // update cache in background
+    return cached;
+  }
+  await refresh;
+  const updated = await caches.match(req);
+  if (updated) return updated;
   try {
     const resp = await fetch(req);
-    if (resp.ok) {
-      const c = await caches.open(CACHE);
-      await c.put(req, resp.clone());
-    }
     return resp;
   } catch(e) {
     return new Response('Offline', { status: 503 });
